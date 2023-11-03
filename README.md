@@ -1,0 +1,1 @@
+# sri-ta2-mappable-criteria
