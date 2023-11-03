@@ -1,15 +1,23 @@
 # sri-ta2-mappable-criteria
 
 ## Dependencies
-- PyMuPDF
+- fitz
 - Pytorch
 - Huggingface
 - Llama-Index
 - PyYAML
 - ...
 
-## Config
-check `base_config.yaml`
+## Setup
+- set environment variable for OpenAI API calls:
+```
+export OPENAI_API_KEY=<your secret key>
+```
+
+- check `base_config.yaml` for other parameters
+  - `data_dir`, `log_dir`
+  - `llm_model`, `llm_temperature`
+  - ...
 
 ## Quick start
 ```
