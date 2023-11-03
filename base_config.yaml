@@ -1,7 +1,7 @@
 name: default
 
-data_dir: /data/meng/projects/cmaas-ta2/papers
-log_dir: /data/meng/projects/cmaas-ta2/fomma-mappable-criteria/log_debug
+data_dir: data
+log_dir: logs
 
 text_extraction:
   chunk_size: 256
