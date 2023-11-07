@@ -1,7 +1,7 @@
 name: default
 
 data_dir: data
-log_dir: logs
+log_dir: logs_debug
 
 text_extraction:
   chunk_size: 256
@@ -27,7 +27,7 @@ mineral_system:
         Here is a paragraph from an academic paper:
         {context_str}
 
-        Is this paragraph talking about any of the mineral system components? If not, simplay answer with 'no', otherwise, choose one out of the four options below:
+        Is this paragraph talking about any of the mineral system components? If not, simply answer with 'no', otherwise, choose one out of the four options below:
         A. source
         B. pathway
         C. trap
@@ -49,15 +49,28 @@ mappable_criteria:
       trap: physical and/or chemical mechanism(s) that deposited ore components at the sink
       preservation: processes permitting preservation of mineralization in the crust up to the present time
 
+    # templates:
+    #   system: You are an expert geologist.
+    #   user: |
+    #     For a region to be prospective for mineral deposits now, it must necessarily show evidence for critical ingredients required for the formation and preservation of those deposits.
+    #     One of the critical ingredients is {component}. The definition for {component} is {definition}.
+    #     Here are some paragraphs found in an academic paper that might be related to the {component} of the {deposit} deposit type:
+    #     {context_str}
+
+    #     Summarize the paragraphs above into a list of mappable proxies that represent the geological features.
+    #     Answer: 
     templates:
       system: You are an expert geologist.
       user: |
         For a region to be prospective for mineral deposits now, it must necessarily show evidence for critical ingredients required for the formation and preservation of those deposits.
         One of the critical ingredients is {component}. The definition for {component} is {definition}.
-        Here are some paragraphs found in an academic paper that might be related to the {component} of the {deposit} deposit type:
+        
+        These formation processes generally are not observable directly for the mineral systems being investigated, and so for the purposes of spatial modelling it needs to be translated into one or more observable and mappable geological features, which are called 'mappable criteria'.
+
+        Here is a paragraph from an academic paper that might be related to the {component} of the {deposit} deposit type:
         {context_str}
 
-        Summarize the paragraphs above into a list of mappable proxies that represent the geological features.
+        Summarize the paragraph above into a mappable proxy that represent the geological features.
         Answer: 
 
 output:
