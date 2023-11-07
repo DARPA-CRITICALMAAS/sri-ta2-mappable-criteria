@@ -27,7 +27,7 @@ def load_response(file_id, doc_dir, response_dir):
 
 def generate_request(doc, config):
     mappable_criteria = {comp: [] for comp in config['definition']}
-    requests = {}
+    requests = []
 
     for node_id, node in doc.items():
         for comp in mappable_criteria:
@@ -42,7 +42,7 @@ def generate_request(doc, config):
             context_str = '\n'.join(["\"" + s + "\"" for s in sentences])
             )
 
-        requests[comp] = {
+        requests.append({
             "model": config["llm_model"],
             "messages": [
                 {"role": "system", "content": config["templates"]["system"]},
@@ -52,8 +52,41 @@ def generate_request(doc, config):
             "metadata":{
                 "component": comp,
             }
-        }
+        })
     return requests
+
+
+def generate_request_each_chunk(doc, config):
+    mappable_criteria = {comp: [] for comp in config['definition']}
+    requests = []
+
+    for node_id, node in doc.items():
+        node_comp = None
+        for comp in mappable_criteria:
+            if comp in node['response'].lower():
+                node_comp = comp
+        if node_comp:
+            para = node['text'].replace('\n', ' ')
+
+            prompt = config['templates']['user'].format(
+                component=node_comp, definition=config['definition'][node_comp], deposit = config['deposit_type'],
+                context_str = para
+            )
+
+            requests.append({
+                "model": config["llm_model"],
+                "messages": [
+                    {"role": "system", "content": config["templates"]["system"]},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": config["llm_temperature"],
+                "metadata":{
+                    "node_id": node_id,
+                    "component": node_comp,
+                }
+            })
+    return requests
+
 
 
 if __name__ == '__main__':
@@ -79,9 +112,9 @@ if __name__ == '__main__':
     for fname in fnames:
         file_id = fname.split('.')[0]
         doc = load_response(file_id, doc_dir, response_dir)
-        requests = generate_request(doc, cfg_['llm_config'])
+        requests = generate_request_each_chunk(doc, cfg_['llm_config'])
 
         out_fname = os.path.join(out_dir, fname)
         with open(out_fname, 'w') as f:
-            for comp in requests:
-                f.write(json.dumps(requests[comp]) + '\n')
+            for req in requests:
+                f.write(json.dumps(req) + '\n')
