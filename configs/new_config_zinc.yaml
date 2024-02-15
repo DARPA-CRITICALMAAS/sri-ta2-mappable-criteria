@@ -1,0 +1,125 @@
+name: default
+deposit_type: MVT Zinc Lead
+minmod_url: https://minmod.isi.edu/resource/
+deposit_type_Qnum: ['Q380']
+data_dir: data/data_MVT
+log_dir: logs/logs_MVT_new_def
+
+# define: &llm 'vicuna-7b-v1.5-16k'
+define: &llm "gpt-3.5-turbo-1106"
+
+text_extraction:
+  chunk_size: 256
+  chunk_overlap: 64
+  doc_dir: doc_dir
+
+mineral_system: 
+  prompts_dir: mineral_system/prompts
+  response_dir: mineral_system/response
+
+  definition:
+    source: Tectonic and geochemical processes that produce 'source regions' often enriched in metals and fluids/magma capable of mobilizing and transporting metals, ligands, fluids, and other ore components, and the energy that drives the fluid flow.
+    pathway: Geological processes that produce broad structural and basinal architecture, including zones of heterogeneity (pathways) which provide conduits for hydrothermal fluid/magma flow at lithospheric, crustal, province and district scales.
+    energy: Energy source and processes that drive magma or fluid flow.
+    trap: Geochemical (fluid/magma mixing, fractional crystallization, phase immiscibility, fluid rock interaction, etc.) and physical (decompression, density separation, etc.) processes that operate at the trap or metal deposition site and cause metal deposition from a fluid/ magma in a host rock or structure.
+    outflow: Geochemical processes that operate during and after deposition to produce geochemical and geophysical anomalies that allow later detection. Includes mineralization footprint, mineral occurrences, mineral deposits, geochemical anomalies.
+    preservation: Processes that exhume, enhance preservation or upgrade mineralized material after deposition.
+
+  llm_config:
+    llm_model: *llm
+    llm_temperature: 0
+    templates:
+      system: You are an expert geologist.
+      user: |
+        For a region to be prospective for mineral deposits now, it must necessarily show evidence for all the critical ingredients required for the formation and preservation of those deposits, which are called mineral system components:
+        {mineral_system_def}
+
+        Here is a paragraph from an academic paper:
+        {context_str}
+
+        Is this paragraph talking about any of the mineral system components? If not, simply answer with 'no', otherwise, choose one out of the four options below:
+        {mineral_system_comps}
+
+        Your answer: 
+
+mappable_criteria:
+  prompts_dir: mappable_criteria/prompts
+  response_dir: mappable_criteria/response
+
+  llm_config:
+    llm_model: *llm
+    llm_temperature: 0
+
+    templates:
+      system: You are an expert geologist.
+      user: |
+        For a region to be prospective for mineral deposits now, it must necessarily show evidence for critical ingredients required for the formation and preservation of those deposits.
+        One of the critical ingredients is {component}. The definition for {component} is {definition}.
+        
+        These formation processes generally are not observable directly for the mineral systems being investigated, and so for the purposes of spatial modelling it needs to be translated into one or more observable and mappable geological features, which are called 'mappable criteria'. Examples for mappable features: distribution of key minerals and rock types, presence of faults, craton edges, metamorphic grade, ages of rocks, magnetic anomalies.
+
+        Here is a paragraph from an academic paper that might be related to the {component} of the {deposit} deposit type:
+        {context_str}
+
+        Summarize the paragraph above into a list of one mappable proxy that represent the geological features.
+        Answer: 
+
+map_layers:
+  prompts_dir: map_layers/prompts
+  response_dir: map_layers/response
+  
+  prompts_ppl_dir: map_layers/prompts_ppl_Gina_jtm
+  response_ppl_dir: map_layers/response_ppl_Gina_jtm
+
+  datacube_var_file: lawly_MVT_var.json
+  # map_layer_file: 2021_Table01_Datasets.csv
+  map_layer_file: 2021_table01_datasets_Gina_jtm.csv
+  map_layer_groups:
+      - "Discrete Global Grid System (DGGS): Utilizes the H3 system for geospatial indexing, providing cell addresses, resolutions, geometries, and coordinates."
+      - "Geography: Defines continent, country, and province/state/territory layers, identifying majority and minority coverage fractions."
+      - "Geology (geological terrane): terrane name, precense or absence of two or more terrane names, terrane boundary."
+      - "Geology (Geochronology): Eon, Era, and Period with majority or minority coverage."
+      - "Geology (Lithology): lithology sub-type with majority or minority coverage."
+      - "Geology (geological properties): precense or absence of alkalic, anatectic, calcareous, carbonaceous, cherty, coarse clastic, evaporitic, felsic, fine clastic, gneissose, igneous, intermediate, pegmatitic, red bed, schistose, sedimentary, ultramafic mafic."
+      - "Geology (faults): passive margin, black shale, fault, cover thickness."
+      - "Geology (Paleo): longitude and latitude based on maximum and minimum period."
+      - "Geophysics (Seismic): depth to lithosphere-asthenosphere boundary, depth to mohorovicic discontinuity or moho, seismic velocity at various depths."
+      - "Geophysics (Gravity): gravity field curvature derivatives, gravity anomalies, gradient magnitudes, gravity worms."
+      - "Geophysics (Magnetic): magnetic reduced-to-pole, upward-continued, depth to curie-point, 1st vertical derivative, gradient magnitudes, magnetic worms."
+      - "Geophysics (Heat Flow): global surface heat flow."
+      - "Geophysics (Magnetotelluric): global resistivity."
+      - "Geophysics (Lithospheric models): asthenospheric density, crustal density, lithospheric density."
+      - "Geophysics (Crustal models): crust type, crustal thickness, sediment thickness."
+
+  llm_config:
+    llm_model: *llm
+    llm_temperature: 0
+
+    templates:
+      system: You are an expert geologist.
+      user: |
+        Mineral formation processes generally are not observable directly for the mineral systems being investigated, and so for the purposes of spatial modelling it needs to be translated into one or more observable and mappable geological features, which are called 'mappable criteria'.
+
+        Here is a list of map layers:
+        {map_layer_groups}
+
+        Here is a mappable criteria for the {deposit} deposit type:
+        {mappable_criteria}
+
+        Choose 1-5 layers from the map layer list that are most likely to contain information about the mappable criteria.
+        Answer: 
+      user_ppl: |
+        Mineral formation processes generally are not observable directly for the mineral systems being investigated. For the purposes of spatial modelling it needs to be translated into one or more observable and mappable geological features, which are called 'mappable criteria'.
+
+        Here is one mappable criteria for the {deposit} deposit type:
+        {mappable_criteria}
+
+        Here is one of the map layers available for spatial modeling of mineral potential:
+        {map_layer}
+        
+        Do you think this map layer will contain information about the mappable criteria? Provide a Yes/No answer.
+        Answer: 
+
+output:
+  schema_dir: schema_Gina_jtm
+  pred_dir: prediction

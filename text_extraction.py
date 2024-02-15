@@ -4,12 +4,16 @@ import fitz
 import yaml
 import argparse
 from collections import OrderedDict
+import pandas as pd
 
-from llama_index.text_splitter import SentenceSplitter
+
+from llama_index.core.node_parser import SentenceSplitter
 
 
 def extract_text(doc_dir, chunk_size, chunk_overlap):
-    doc_list = [f for f in os.listdir(doc_dir) if f.endswith('.pdf')]
+    doc_meta = pd.read_csv(os.path.join(doc_dir, 'metadata.csv'))
+    doc_list = [fid + '.pdf' for fid in doc_meta['id'].tolist()]
+    # doc_list = [f for f in os.listdir(doc_dir) if f.endswith('.pdf')]
 
     text_splitter = SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 

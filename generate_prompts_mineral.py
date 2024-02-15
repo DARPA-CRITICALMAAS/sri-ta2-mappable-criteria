@@ -6,20 +6,30 @@ import argparse
 from collections import OrderedDict
 
 
-def generate_requests(doc, config, sample_per_doc=0):
+def generate_requests(doc, cfg_, sample_per_doc=0):
     if sample_per_doc > 0:
         nodes = random.sample(nodes, k=min(sample_per_doc, len(nodes)))
 
+    cfg_llm = cfg_['llm_config']
+
+    ms_def = cfg_['definition']
+    mineral_system_def_str = '\n'.join([f'{i+1}. {comp}: {ms_def[comp]}' for i, comp in enumerate(ms_def)])
+    mineral_system_comps_str = '\n'.join([f'{i+1}. {comp}' for i, comp in enumerate(ms_def)])
+
     requests = OrderedDict()
     for node_id, node in doc.items():
-        message_user = config["templates"]["user"].format(context_str = node["text"].replace('\n', ' '))
+        message_user = cfg_llm["templates"]["user"].format(
+            context_str = node["text"].replace('\n', ' '),
+            mineral_system_def = mineral_system_def_str,
+            mineral_system_comps = mineral_system_comps_str,
+            )
         request = {
-                "model": config["llm_model"],
+                "model": cfg_llm["llm_model"],
                 "messages": [
-                    {"role": "system", "content": config["templates"]["system"]},
+                    {"role": "system", "content": cfg_llm["templates"]["system"]},
                     {"role": "user", "content": message_user},
                 ],
-                "temperature": config["llm_temperature"],
+                "temperature": cfg_llm["llm_temperature"],
                 "metadata": {
                     "node_id": node_id,
                 }
@@ -48,7 +58,7 @@ if __name__ == '__main__':
         doc_fname_full = os.path.join(doc_dir, doc_fname)
         with open(doc_fname_full, 'r') as f:
             doc = json.load(f, object_pairs_hook=OrderedDict)
-        requests = generate_requests(doc, llm_config)
+        requests = generate_requests(doc, cfg_)
 
         request_fname = os.path.join(out_dir, doc_fname.replace('.json', '.jsonl'))
         f = open(request_fname, 'w')
