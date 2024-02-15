@@ -25,7 +25,7 @@ def load_response(file_id, doc_dir, response_dir):
             doc[node_id]['response'] = response['choices'][0]['message']['content']
     return doc
 
-def generate_request(doc, config):
+def generate_request(doc, deposit_type, config):
     mappable_criteria = {comp: [] for comp in config['definition']}
     requests = []
 
@@ -38,7 +38,7 @@ def generate_request(doc, config):
         sentences = [node['text'].replace('\n', ' ') for node in mappable_criteria[comp]]
 
         prompt = config['templates']["user"].format(
-            component=comp, definition = config['definition'][comp], deposit=config['deposit_type'],
+            component=comp, definition = config['definition'][comp], deposit=deposit_type,
             context_str = '\n'.join(["\"" + s + "\"" for s in sentences])
             )
 
@@ -56,8 +56,12 @@ def generate_request(doc, config):
     return requests
 
 
-def generate_request_each_chunk(doc, config):
-    mappable_criteria = {comp: [] for comp in config['definition']}
+def generate_request_each_chunk(doc, cfg):
+    deposit_type = cfg['deposit_type']
+    ms_def = cfg['mineral_system']['definition']
+    llm_cfg = cfg['mappable_criteria']['llm_config']
+    
+    mappable_criteria = {comp: [] for comp in ms_def}
     requests = []
 
     for node_id, node in doc.items():
@@ -68,18 +72,18 @@ def generate_request_each_chunk(doc, config):
         if node_comp:
             para = node['text'].replace('\n', ' ')
 
-            prompt = config['templates']['user'].format(
-                component=node_comp, definition=config['definition'][node_comp], deposit = config['deposit_type'],
+            prompt = llm_cfg['templates']['user'].format(
+                component=node_comp, definition=ms_def[node_comp], deposit = deposit_type,
                 context_str = para
             )
 
             requests.append({
-                "model": config["llm_model"],
+                "model": llm_cfg["llm_model"],
                 "messages": [
-                    {"role": "system", "content": config["templates"]["system"]},
+                    {"role": "system", "content": llm_cfg["templates"]["system"]},
                     {"role": "user", "content": prompt},
                 ],
-                "temperature": config["llm_temperature"],
+                "temperature": llm_cfg["llm_temperature"],
                 "metadata":{
                     "node_id": node_id,
                     "component": node_comp,
@@ -96,7 +100,6 @@ if __name__ == '__main__':
 
     with open(args.config) as f:
         cfg = yaml.load(f, Loader=yaml.FullLoader)
-    cfg_ = cfg['mappable_criteria']
 
     doc_dir = os.path.join(cfg['log_dir'], cfg['text_extraction']['doc_dir'])
 
@@ -104,7 +107,7 @@ if __name__ == '__main__':
         cfg['log_dir'], cfg['mineral_system']['response_dir']
     )
     out_dir = os.path.join(
-        cfg['log_dir'], cfg_['prompts_dir']
+        cfg['log_dir'], cfg['mappable_criteria']['prompts_dir']
     )
     os.makedirs(out_dir, exist_ok=True)
 
@@ -112,7 +115,7 @@ if __name__ == '__main__':
     for fname in fnames:
         file_id = fname.split('.')[0]
         doc = load_response(file_id, doc_dir, response_dir)
-        requests = generate_request_each_chunk(doc, cfg_['llm_config'])
+        requests = generate_request_each_chunk(doc, cfg)
 
         out_fname = os.path.join(out_dir, fname)
         with open(out_fname, 'w') as f:
