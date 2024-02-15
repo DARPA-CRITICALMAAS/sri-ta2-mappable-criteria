@@ -370,7 +370,7 @@ class APIRequest:
 
 def api_endpoint_from_url(request_url):
     """Extract the API endpoint from the request URL."""
-    match = re.search("^https://[^/]+/v\\d+/(.+)$", request_url)
+    match = re.search("^https?://[^/]+/v\\d+/(.+)$", request_url)
     if match is None:
         # for Azure OpenAI deployment urls
         match = re.search(r"^https://[^/]+/openai/deployments/[^/]+/(.+?)(\?|$)", request_url)
@@ -463,6 +463,8 @@ if __name__ == "__main__":
     parser.add_argument("--save_filepath", default=None)
     parser.add_argument("--request_url", default="https://api.openai.com/v1/chat/completions")
     parser.add_argument("--api_key", default=os.getenv("OPENAI_API_KEY"))
+    # parser.add_argument("--request_url", default="http://localhost:8020/v1/chat/completions")
+    # parser.add_argument("--api_key", default=os.getenv("EMPTY"))
     parser.add_argument("--max_requests_per_minute", type=int, default=2_000 * 0.5)
     parser.add_argument("--max_tokens_per_minute", type=int, default=150_000 * 0.5)
     # https://github.com/openai/tiktoken/blob/39f29cecdb6fc38d9a3434e5dd15e4de58cf3c80/tiktoken/model.py#L19
