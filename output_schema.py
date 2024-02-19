@@ -1,6 +1,7 @@
 import os
 import simplejson
 import yaml
+import math
 import argparse
 from collections import OrderedDict
 
@@ -88,7 +89,7 @@ if __name__ == '__main__':
     for col in col_list:
         map_layer_df[col] = map_layer_df[col].apply(lambda x: str(x))
     map_layer_df = map_layer_df[map_layer_df['Method sub-type'] != 'Training data']
-    map_layer_list = map_layer_df.apply(':'.join, axis=1).to_list()
+    map_layer_list = map_layer_df.apply('###'.join, axis=1).to_list()
 
 
     out_dir = os.path.join(
@@ -111,6 +112,12 @@ if __name__ == '__main__':
             doc = simplejson.load(f, object_pairs_hook=OrderedDict)
         
         doc_meta = doc_metadata[doc_metadata["id"] == file_id].iloc[0].to_dict()
+        doc_meta_ = {}
+        for k in doc_meta:
+            if isinstance(doc_meta[k], str):
+                doc_meta_[k] = doc_meta[k]
+        doc_meta = doc_meta_
+        doc_meta["authors"] = doc_meta["authors"].split(',')
 
         map_cri_file = os.path.join(map_cri_dir, fname)
         map_cri_response = load_response_map_cri(map_cri_file)
@@ -144,7 +151,11 @@ if __name__ == '__main__':
                 "supporting_references": [{
                     # "id": file_id,
                     "document": doc_meta,
-                    "page_info": [{"text": doc[node_id]["text"], "page": doc[node_id]["page"], "bounding_box": doc[node_id]["coords"]}]
+                    "page_info": [{
+                        "text": doc[node_id]["text"],
+                        "page": doc[node_id]["page"],
+                        "bounding_box": {}, #doc[node_id]["coords"]
+                    }]
                 }]
             })
     
