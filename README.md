@@ -49,7 +49,7 @@ python text_extraction.py --config configs/{cfg_file_name}.yaml
 python generate_prompts_mineral.py --config configs/{cfg_file_name}.yaml
 ```
 
-3. run LLM queries (OpenAI API)
+3. run LLM queries (using OpenAI API by default)
 ```
 python run_completion.py --input_dir /path/to/input/prompts --output_dir /path/to/output/response
 ```
@@ -68,7 +68,7 @@ python generate_prompts_aggregation_ppl.py --config configs/{cfg_file_name_.yaml
 
 7. run LLM queries (same as step 3)
 
-8. generate output schema
+8. generate output schema (corresponds to [TA2 schema](https://github.com/DARPA-CRITICALMAAS/schemas/tree/main/ta2)
 ```
 python output_schema.py --config configs/{cfg_file_name}.yaml
 ```
