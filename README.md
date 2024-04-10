@@ -13,6 +13,7 @@ docker image pull mye1225/cmaas-ta2-sri-mappable-criteria
 
 - Prepare input data
 follow the directory structure below:
+```
 .
 ├── configs
 │   ├── base_config.yaml
@@ -23,10 +24,13 @@ follow the directory structure below:
 │       └── metadata.csv
 ├── docker_run.sh
 └── logs
+```
 
-The `data` folder contains input pdf documents. `metadata.csv` file contains the metadata of the document, including filename (`id` column), title, authors list, DOI, etc.
-The `configs` folder contains configurations for mappable criteria discovery pipeline, including deposit type, system component definitions, map layer descriptions, LLM hyperparameters, etc.
-The `logs` folder will contain output files generated from runs.
+  -- The `data` folder contains input pdf documents. `metadata.csv` file contains the metadata of the document, including filename (`id` column), title, authors list, DOI, etc.
+
+  -- The `configs` folder contains configurations for mappable criteria discovery pipeline, including deposit type, system component definitions, map layer descriptions, LLM hyperparameters, etc.
+
+  -- The `logs` folder will contain output files generated from runs.
 
 - Run the container
 ```
