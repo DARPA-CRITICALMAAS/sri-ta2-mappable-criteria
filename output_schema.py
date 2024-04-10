@@ -162,6 +162,7 @@ if __name__ == '__main__':
     minmod_url = 'https://minmod.isi.edu/resource/'
     mineral_system['deposit_type'] = [cfg['minmod_url'] + Q_num for Q_num in cfg['deposit_type_Qnum']]
 
+    # output txt
     out_fname = os.path.join(out_dir, cfg['deposit_type'].replace(' ', '_') + '.txt')
     with open(out_fname, 'w') as f:
         f.write(cfg['deposit_type'] + '\n')
@@ -174,6 +175,21 @@ if __name__ == '__main__':
         for m, score in overall_map_layers_sorted:
             f.write(','.join([str(score/counter), m]) + '\n')
 
+    # output xlsx
+    import xlsxwriter
+    out_fname = os.path.join(out_dir, cfg['deposit_type'].replace(' ', '_') + '.xlsx')
+    workbook = xlsxwriter.Workbook(out_fname)
+    for comp in components:
+        worksheet = workbook.add_worksheet(comp)
+        for i, c in enumerate(mineral_system[comp]):
+            worksheet.write(i, 0, c["criteria"])
+    worksheet = workbook.add_worksheet("map layer recommendation")
+    for i, (m, score) in enumerate(overall_map_layers_sorted):
+        worksheet.write(i, 0, score/counter)
+        worksheet.write(i, 1, m)
+    workbook.close()
+
+    # output json
     out_json = {
         'MineralSystem':[mineral_system],
         }
