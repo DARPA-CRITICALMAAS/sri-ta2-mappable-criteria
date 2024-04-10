@@ -1,5 +1,43 @@
 # sri-ta2-mappable-criteria
 
+## Run with docker
+- Build docker image
+```
+cd sri-ta2-mappable-criteria
+docker build -t cmaas-ta2-sri-mappable-criteria -f docker/Dockerfile .
+```
+Alternatively, you can directly pull the image from Docker Hub:
+```
+docker image pull mye1225/cmaas-ta2-sri-mappable-criteria
+```
+
+- Prepare input data
+follow the directory structure below:
+.
+├── configs
+│   ├── base_config.yaml
+│   └── new_config_nickel.yaml
+├── data
+│   └── data_nickel
+│       ├── Barnes_etal_2015.pdf
+│       └── metadata.csv
+├── docker_run.sh
+└── logs
+
+The `data` folder contains input pdf documents. `metadata.csv` file contains the metadata of the document, including filename (`id` column), title, authors list, DOI, etc.
+The `configs` folder contains configurations for mappable criteria discovery pipeline, including deposit type, system component definitions, map layer descriptions, LLM hyperparameters, etc.
+The `logs` folder will contain output files generated from runs.
+
+- Run the container
+```
+docker run -it \
+-v /path/to/data:/workdir/data \
+-v /path/to/configs:/workdir/configs \
+-v /path/to/logs:/workdir/logs \
+cmaas-ta2-sri-mappable-criteria \
+python main.py configs/config_filename.yaml
+```
+
 ## Dependencies
 - accelerate
 - bitsandbytes
