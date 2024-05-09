@@ -1,0 +1,19 @@
+numpy
+pandas
+beautifulsoup4
+ipykernel
+requests
+requests_html
+lxml_html_clean
+pdfminer
+filelock
+unidecode
+PyEnchant
+spacy
+# python -m spacy download en_core_web_sm
+# python -m spacy download en_core_web_lg
+langdetect
+PyYAML
+geopandas
+pyarrow
+scikit-learn
