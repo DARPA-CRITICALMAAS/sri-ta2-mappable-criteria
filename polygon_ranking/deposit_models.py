@@ -30,11 +30,6 @@ systems_dict = {
         'geochemical_signatures': 'W, Cu, Mo, As, Bi, and B. Less commonly Zn, Pb, Sn, Be, and F.',
         'geophysical_signature': 'Magnetic and induced polarization surveys can be used to outline the surface projection of ore bodies because magnetite, pyrrhotite, and other sulfide minerals are common in these deposits. Although skarns typically have a positive density contrast relative to adjacent intrusions and carbonate rocks, gravity surveys are not commonly used due to high cost and nonspecificity for ore. Remote-sensing techniques can effectively identify carbonate terranes and iron enrichment in skarns if skarn is exposed. In some cases, contacts between intrusions and sedimentary rocks can be mapped and carbonate rocks can be distinguished from noncarbonate rocks.'
     },
-    'mvt_zinc_ga_ge': {
-        'rock_types': 'rhanerozoic rocks',
-        'tectonic_setting': 'Extensional domains inboard of phanerzoic tectonic belts',
-        'age_range': 'Assimilation of Pangea from Devonian to Permian time (assembly of Pangea)',
-    },
     'mvt_zinc_lead': {
         'synonyms': 'Carbonate-hosted Pb-Zn; Mississippi Valley type',
         'description': 'Stratabound, carbonate-hosted deposits of galena, sphalerite, and chalcopyrite in rocks having primary and secondary porosity, commonly related to reefs on paleotopographic highs (see fig. 166). (For grade-tonnage model see Appalachian Zn deposit model.)',
