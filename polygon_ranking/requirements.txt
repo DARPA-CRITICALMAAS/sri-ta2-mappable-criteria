@@ -17,3 +17,4 @@ PyYAML
 geopandas
 pyarrow
 scikit-learn
+networkx
