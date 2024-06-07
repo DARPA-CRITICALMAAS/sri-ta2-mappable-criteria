@@ -10,11 +10,14 @@ filelock
 unidecode
 PyEnchant
 spacy
-# python -m spacy download en_core_web_sm
-# python -m spacy download en_core_web_lg
+sentence-transformers
 langdetect
 PyYAML
 geopandas
 pyarrow
 scikit-learn
 networkx
+ipdb
+matplotlib
+# python -m spacy download en_core_web_sm
+# python -m spacy download en_core_web_lg
