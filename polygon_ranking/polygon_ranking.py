@@ -297,30 +297,34 @@ def rank(args):
 
     # full_desc = data_[args.desc_col].to_list()
 
+    if len(args.deposit_type) == 0:
+        args.deposit_type = list(systems_dict.keys())
 
-    if args.deposit_type == 'all':
-        for deposit_type in systems_dict:
-            gpd_data, cos_sim = rank_polygon(systems_dict[deposit_type], embed_model, data_, args)
-            gpkg_fname = os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{args.deposit_type}.gpkg")
-            gpd_data.to_file(gpkg_fname, driver="GPKG")
-
-            att_list = list(cos_sim.keys())
-            scores = np.stack([cos_sim[k] for k in att_list])
-            fig, ax = plt.subplots()
-            ax.matshow(np.corrcoef(scores))
-            plt.savefig(os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{args.deposit_type}.png"))
-    else:
-        gpd_data, cos_sim = rank_polygon(systems_dict[args.deposit_type], embed_model, data_, args)
-        gpkg_fname = os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{args.deposit_type}.gpkg")
+    for deposit_type in args.deposit_type:
+        gpd_data, cos_sim = rank_polygon(systems_dict[deposit_type], embed_model, data_, args)
+        input_fname = args.processed_input.split('/')[-1].split('.')[0]
+        gpkg_fname = os.path.join(args.output_dir, f"{input_fname}.{deposit_type}.gpkg")
         gpd_data.to_file(gpkg_fname, driver="GPKG")
 
         att_list = list(cos_sim.keys())
         scores = np.stack([cos_sim[k] for k in att_list])
         fig, ax = plt.subplots()
         ax.matshow(np.corrcoef(scores))
-        plt.savefig(os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{args.deposit_type}.png"))
+        plt.savefig(os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{deposit_type}.png"))
         min_cor_subset = least_cor_subset(np.corrcoef(scores), 4)
         print([att_list[i] for i in min_cor_subset])
+    # else:
+    #     gpd_data, cos_sim = rank_polygon(systems_dict[args.deposit_type], embed_model, data_, args)
+    #     gpkg_fname = os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{args.deposit_type}.gpkg")
+    #     gpd_data.to_file(gpkg_fname, driver="GPKG")
+
+    #     att_list = list(cos_sim.keys())
+    #     scores = np.stack([cos_sim[k] for k in att_list])
+    #     fig, ax = plt.subplots()
+    #     ax.matshow(np.corrcoef(scores))
+    #     plt.savefig(os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{args.deposit_type}.png"))
+    #     min_cor_subset = least_cor_subset(np.corrcoef(scores), 4)
+    #     print([att_list[i] for i in min_cor_subset])
  
 
 
@@ -338,7 +342,7 @@ if __name__ == '__main__':
     rank_parser.add_argument('--processed_input', type=str, default='output_preproc/merged_table_processed.parquet')
     rank_parser.add_argument('--desc_col', type=str, default="full_desc")
     rank_parser.add_argument('--hf_model', type=str, default='BAAI/bge-base-en-v1.5')
-    rank_parser.add_argument('--deposit_type', type=str, default='all')
+    rank_parser.add_argument('--deposit_type', type=str, nargs='+', default=[])
     rank_parser.add_argument('--negatives', type=str, default=None)
     rank_parser.add_argument('--normalize', action='store_true', default=False)
     rank_parser.add_argument('--output_dir', type=str, default='output_rank')
