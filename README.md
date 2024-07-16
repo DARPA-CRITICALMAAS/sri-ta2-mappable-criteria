@@ -1,5 +1,7 @@
 # sri-ta2-mappable-criteria
 
+> :warning: **Content below are deprecated and no longer maintained**: Please refer to this [new README](polygon_ranking/README.md) for information on the polygon ranking tool that is being actively developed.
+
 ## Run with docker
 ### Build docker image
 ```
