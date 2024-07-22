@@ -83,4 +83,20 @@ systems_dict = {
         'geochemical_signatures': 'Li >300 ppm; ±F, U, Be, B enrichment; high Mg, low Al content',
         'geophysical_signatures': 'Seismic surveys may delineate extent and thickness of lacustrine sediments, and basin depth.',
     },
+    'peralkline_carbonatite_ree':{
+        'deposit_type': 'Peralkaline and Carbonatite Rare Earth Elements',
+        'synonyms': 'REE deposits in peralkaline igneous rocks and carbonatites',
+        'commodities': 'REE (La, Ce, Nd, Pr, Sm, Eu, Gd, Tb, Dy, Ho, Er, Tm, Yb, Lu, Y), Nb, Ta, Zr, Hf, Th, U',
+        'description': 'These deposits are characterized by the presence of rare earth elements (REE) in peralkaline igneous rocks and carbonatites. They often contain high concentrations of light and heavy REEs, along with other elements such as niobium, tantalum, zirconium, and thorium. The REEs are typically hosted in a variety of minerals, including bastnäsite, monazite, xenotime, and eudialyte.',
+        'rock_types': 'Peralkaline syenites, nepheline syenites, phonolites, and carbonatites. Associated with alkaline igneous complexes and carbonatite intrusions.',
+        'textures': 'Varies from coarse-grained to fine-grained, often with pegmatitic textures. Carbonatites may exhibit banded or brecciated textures.',
+        'age_range': 'Primarily Proterozoic to Phanerozoic, but can be any age.',
+        'depositional_environment': 'Intrusive complexes, often associated with rift zones or other extensional tectonic settings. Carbonatites typically form as small, isolated intrusions or as part of larger alkaline igneous complexes.',
+        'tectonic_setting': 'Commonly associated with continental rift zones, intraplate settings, and other extensional environments. These settings facilitate the emplacement of alkaline magmas and carbonatites.',
+        'ore_mineralogy': 'Bastnäsite, monazite, xenotime, eudialyte, loparite, parisite, synchysite, pyrochlore, columbite-tantalite, zircon, baddeleyite, thorite, and uraninite.',
+        'alteration': 'Hydrothermal alteration is common, including fenitization (alkali metasomatism) around carbonatite intrusions. Alteration minerals may include aegirine, riebeckite, alkali feldspar, and carbonate minerals.',
+        'ore_controls': 'Structural controls such as faults and fractures are important for the emplacement of peralkaline and carbonatite magmas. The presence of pre-existing alkaline igneous complexes can also localize mineralization.',
+        'geochemical_signatures': 'High concentrations of REEs, Nb, Ta, Zr, Hf, Th, and U. Geochemical anomalies in light and heavy REEs, often with elevated levels of fluorine, phosphorus, and barium.',
+        'geophysical_signature': 'Magnetic and radiometric surveys can be effective in identifying these deposits due to the presence of magnetic minerals and radioactive elements (e.g., thorium and uranium). Gravity surveys may also be useful in delineating dense carbonatite bodies. Remote sensing techniques can help identify alteration zones and structural features associated with these deposits.',
+    }
 }
