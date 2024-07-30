@@ -217,8 +217,8 @@ def preproc(args):
 
     sgmc_subset = sgmc_geology[attribute_list]
 
-    # ind_invalid = ~sgmc_subset['geometry'].is_valid
-    # sgmc_subset.loc[ind_invalid, 'geometry'] = sgmc_subset.loc[ind_invalid, 'geometry'].buffer(0)
+    ind_invalid = ~sgmc_subset['geometry'].is_valid
+    sgmc_subset.loc[ind_invalid, 'geometry'] = sgmc_subset.loc[ind_invalid, 'geometry'].buffer(0)
 
     key_cols = ['STATE', 'ORIG_LABEL', 'SGMC_LABEL', 'UNIT_LINK', 'UNIT_NAME']
     sgmc_dissolved = sgmc_subset.dissolve(by=key_cols, aggfunc='first')
@@ -236,7 +236,8 @@ def preproc(args):
 
     data_.groupby(key_cols).size()
 
-    attribute_desc = ['UNIT_NAME', 'AGE_MIN', 'AGE_MAX', 'MAJOR1', 'MAJOR2', 'MAJOR3', 'MINOR1', 'MINOR2', 'MINOR3', 'MINOR4', 'MINOR5', 'GENERALIZE', 'UNITDESC']
+    # attribute_desc = ['UNIT_NAME', 'AGE_MIN', 'AGE_MAX', 'MAJOR1', 'MAJOR2', 'MAJOR3', 'MINOR1', 'MINOR2', 'MINOR3', 'MINOR4', 'MINOR5', 'GENERALIZE', 'UNITDESC']
+    attribute_desc = ['UNIT_NAME', 'MAJOR1', 'MAJOR2', 'MAJOR3', 'MINOR1', 'MINOR2', 'MINOR3', 'MINOR4', 'MINOR5', 'GENERALIZE', 'UNITDESC']
     data_[args.desc_col] = data_[attribute_desc].stack().groupby(level=0).agg(' '.join)
     data_[args.desc_col] = data_[args.desc_col].apply(lambda x: x.replace('-', ' - '))
 
