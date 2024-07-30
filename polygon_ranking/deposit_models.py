@@ -97,6 +97,20 @@ systems_dict = {
         'alteration': 'Hydrothermal alteration is common, including fenitization (alkali metasomatism) around carbonatite intrusions. Alteration minerals may include aegirine, riebeckite, alkali feldspar, and carbonate minerals.',
         'ore_controls': 'Structural controls such as faults and fractures are important for the emplacement of peralkaline and carbonatite magmas. The presence of pre-existing alkaline igneous complexes can also localize mineralization.',
         'geochemical_signatures': 'High concentrations of REEs, Nb, Ta, Zr, Hf, Th, and U. Geochemical anomalies in light and heavy REEs, often with elevated levels of fluorine, phosphorus, and barium.',
-        'geophysical_signature': 'Magnetic and radiometric surveys can be effective in identifying these deposits due to the presence of magnetic minerals and radioactive elements (e.g., thorium and uranium). Gravity surveys may also be useful in delineating dense carbonatite bodies. Remote sensing techniques can help identify alteration zones and structural features associated with these deposits.',
-    }
+        'geophysical_signatures': 'Magnetic and radiometric surveys can be effective in identifying these deposits due to the presence of magnetic minerals and radioactive elements (e.g., thorium and uranium). Gravity surveys may also be useful in delineating dense carbonatite bodies. Remote sensing techniques can help identify alteration zones and structural features associated with these deposits.',
+    },
+    'carbonatite':{
+        'synonyms': 'Apatite-magnetite  and  rare  earths  in  carbonatites',
+        'description': 'Apatite-magnetite  and  rare-earth  deposits  and  combinations  of  these  in  zoned  complexes consisting of central plug of carbonatite or syenite breccia surrounded by ring dikes and conesheets of alternating rock types',
+        'rock_types': 'Apatite-magnetite deposits tend to be in sovite (calcitic carbonatite); RE types tend to occur in ankerite carbonatite; most deposits have both. In general pyroxenite, nepheline and feldspathic  pyroxenite,  carbonatite,  fenite,  ijolite,  dunite,  picrite-porphyrites,  gneiss  and alkalic fenitized gneiss, and locally alkaline volcanics rocks',
+        'textures': 'Hypidiomorphic-granular,  poikiloblastic.  Breccias  abundant. Carbonatites  show  intrusive relations. Wallrocks  fenitized',
+        'age_range': ' Almost  all  known  carbonatite  complexes  are  intrusive  into  Precambrian  shields,  however, the carbonatites themselves may be much younger',
+        'depositional_environment': 'Multiple stages of igneous, deuteric  and  metasomatic  crystallization  in carbonatite magma.',
+        'tectonic_setting': 'Continental shields. Spatially related to fault lineaments such as East African rift system. Locally related to alkaline volcanism',
+        'mineralogy': 'Apatite-magnetite-type: apatite, magnetite, pyrochlore ± columbite ± perovskite ± niocalite. RE-type: barite,  strontianite  ±  siderite  ±  rhodochrosite  ±  ankerite  ±  bastnaesite  ± chlorites ± parisite ± monagite ± breunnerite. General: calcite, dolomite, fluorite, pyrhotite, ilmenite,  molybdenite,  chalcopyrite,  pyrite,  sphalerite, pyroxene,  biotite,  phlogopite,  amphibole, spinel, ± galena, ± hematite, ± quartz, ± forsterite, ± serpentine, ± zircon ± sphene, ± anatase, ±rutile, ± brookite, ± fersmite',
+        'structure': 'Disseminated and banded',
+        'alteration': 'Fenitization  (widespread  alkali  metasomatism  of  quartzo-feldspathic  rock;  mostly alkalic  feldspar  with  some  aegerine  and  subordinate  alkali-hornblende  and  accessory  sphene  andapatite) near contact of carbonatite intrusion. Locally,  chloritization.',
+        'ore_controls': 'Commonly  restricted  to  carbonatite  dikes,  sills,  breccias,  sheets,  veins,  and  large masses, but may occur in other rocks associated with the complex rocks',
+        'geochemical_signatures': 'Radiometric anomalies, magnetic anomalies, high gravity anomalies, Th, U, Ti, Zn, Nb, Y, Ce, Mo, Cu, V, P, Mn, S, La, Sm, Pb, Zr, Ba, Eu. High values of Be, B, Li, Sn, Ta, Hf, and W are rare.'
+    },
 }
