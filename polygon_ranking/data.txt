@@ -1,0 +1,6 @@
+peralkline_carbonatite_ree:None
+porphyry_copper:boundaries/regional_porphyry_copper.zip
+mvt_zinc_lead:boundaries/regional_mvt.zip
+cu_ni_pge_duluth:boundaries/regional_magmatic_nickel.zip
+cu_ni_pge_norilsk:boundaries/regional_magmatic_nickel.zip
+hectorite_li:boundaries/regional_lithium.zip

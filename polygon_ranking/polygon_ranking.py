@@ -302,7 +302,15 @@ def rank(args):
         args.deposit_type = list(systems_dict.keys())
 
     for deposit_type in args.deposit_type:
+
         gpd_data, cos_sim = rank_polygon(systems_dict[deposit_type], embed_model, data_, args)
+
+        if args.boundary is not None and len(args.boundary) > 0:
+            # intersection
+            area = gpd.read_file(args.boundary).to_crs(gpd_data.crs)
+            cols = gpd_data.columns
+            gpd_data = gpd_data.overlay(area, how="intersection")[cols]
+
         input_fname = args.processed_input.split('/')[-1].split('.')[0]
         gpkg_fname = os.path.join(args.output_dir, f"{input_fname}.{deposit_type}.gpkg")
         gpd_data.to_file(gpkg_fname, driver="GPKG")
@@ -328,6 +336,11 @@ def rank(args):
     #     print([att_list[i] for i in min_cor_subset])
  
 
+def nullable_string(val):
+    if not val or val in ['None', 'none', 'nan', 'null']:
+        return None
+    return val
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -342,10 +355,11 @@ if __name__ == '__main__':
     rank_parser = parsers.add_parser(name='rank')
     rank_parser.add_argument('--processed_input', type=str, default='output_preproc/merged_table_processed.parquet')
     rank_parser.add_argument('--desc_col', type=str, default="full_desc")
-    rank_parser.add_argument('--hf_model', type=str, default='BAAI/bge-base-en-v1.5')
+    rank_parser.add_argument('--hf_model', type=str, default='iaross/cm_bert')
     rank_parser.add_argument('--deposit_type', type=str, nargs='+', default=[])
     rank_parser.add_argument('--negatives', type=str, default=None)
     rank_parser.add_argument('--normalize', action='store_true', default=False)
+    rank_parser.add_argument('--boundary', type=nullable_string, default=None)
     rank_parser.add_argument('--output_dir', type=str, default='output_rank')
 
     args = parser.parse_args()
