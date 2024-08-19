@@ -10,11 +10,16 @@ SGMC data can be accessed through [this link](https://www.sciencebase.gov/catalo
 Download these two zipped files and extract them to your local machine.
 
 ## Mac user
-### Environment setup
+### Setup environment
 1. Install Anaconda
+   - https://docs.anaconda.com/anaconda/install/mac-os/
 2. Install Homebrew
-3. Install the enchant C-library: `brew update; brew install enchant`
-4. Make brew libraries, e.g. enchant, discoverable by conda python: https://github.com/pyenchant/pyenchant/issues/265#issuecomment-998965819
+   - https://brew.sh/
+3. Install the enchant C-library
+   - `brew update`
+   - `brew install enchant`
+4. Make brew libraries, e.g. enchant, discoverable by conda python
+   - https://github.com/pyenchant/pyenchant/issues/265#issuecomment-998965819
 5. Pick a work directory
    - `git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git`
    - `cd sri-ta2-mappable-criteria/polygon_ranking`
@@ -22,11 +27,23 @@ Download these two zipped files and extract them to your local machine.
    - `conda activate sri-map-synth`
    - `pip install -r requirements.txt`
 
-### generate maps
+### Generate maps
 1. preprocessing
-
+```bash
+python polygon_ranking.py preproc \
+--input_shapefile /path/to/USGS_SGMC_Shapefiles/SGMC_Geology.dbf \
+--input_desc /path/to/USGS_SGMC_Tables_CSV/SGMC_Units.csv \
+--output /path/to/output/SGMC_preproc_v1.parquet
+```
 2. ranking (map synthesis)
-
+```bash
+python polygon_ranking.py rank \
+--processed_input /path/to/output/SGMC_preproc_v1.parquet \
+--deposit_type mvt_zinc_lead hectorite_li \
+--hf_model iaross/cm_bert \
+--normalize \
+--output_dir /path/to/output/rank
+```
 
 ## Linux user
 ### Build docker image
