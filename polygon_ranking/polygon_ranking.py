@@ -375,7 +375,7 @@ if __name__ == '__main__':
         preproc(args)
     elif args.task == 'rank':
         if not os.path.exists(args.output_dir):
-            os.makedirs(args.output_dir)
+            os.makedirs(args.output_dir, exist_ok=True)
         rank(args)
 
 
