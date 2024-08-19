@@ -248,7 +248,7 @@ def preproc(args):
     data_[args.desc_col] = data_[attribute_desc].stack().groupby(level=0).agg(' '.join)
     data_[args.desc_col] = data_[args.desc_col].apply(lambda x: x.replace('-', ' - '))
 
-    if not use_nrcan_p2:
+    if use_nrcan_p2:
         pipeline = [
             dfcol_sep_hyphen,
             preprocessing_dfcol.rm_dbl_space,
