@@ -14,9 +14,16 @@ from matplotlib import pyplot as plt
 
 from sentence_transformers import SentenceTransformer
 
-import nrcan_p2.data_processing.preprocessing_dfcol as preprocessing_dfcol
-import nrcan_p2.data_processing.preprocessing_str as preprocessing_str
-import nrcan_p2.data_processing.preprocessing_df_filter as preprocessing_df_filter
+try:
+    import nrcan_p2.data_processing.preprocessing_dfcol as preprocessing_dfcol
+    import nrcan_p2.data_processing.preprocessing_str as preprocessing_str
+    import nrcan_p2.data_processing.preprocessing_df_filter as preprocessing_df_filter
+    use_nrcan_p2 = True
+    print("Successfully imported nrcan_p2 modules ... ")
+except Exception as e:
+    use_nrcan_p2 = False
+    print("Error importing nrcan_p2 modules ... ")
+
 from deposit_models import systems_dict
 
 
@@ -241,41 +248,41 @@ def preproc(args):
     data_[args.desc_col] = data_[attribute_desc].stack().groupby(level=0).agg(' '.join)
     data_[args.desc_col] = data_[args.desc_col].apply(lambda x: x.replace('-', ' - '))
 
+    if not use_nrcan_p2:
+        pipeline = [
+            dfcol_sep_hyphen,
+            preprocessing_dfcol.rm_dbl_space,
+            preprocessing_dfcol.rm_cid,
+            preprocessing_dfcol.convert_to_ascii,
+            preprocessing_dfcol.rm_nonprintable,
+            preprocessing_df_filter.filter_no_letter,
+            preprocessing_dfcol.rm_newline_hyphenation,
+            preprocessing_dfcol.rm_newline,    
+            preprocessing_df_filter.filter_no_real_words_g3letter, 
+            # preprocessing_df_filter.filter_l80_real_words,
+            # preprocessing_dfcol.tokenize_spacy_lg,
+            # preprocessing_dfcol.rm_stopwords_spacy,
+        ]
 
-    pipeline = [
-        dfcol_sep_hyphen,
-        preprocessing_dfcol.rm_dbl_space,
-        preprocessing_dfcol.rm_cid,
-        preprocessing_dfcol.convert_to_ascii,
-        preprocessing_dfcol.rm_nonprintable,
-        preprocessing_df_filter.filter_no_letter,
-        preprocessing_dfcol.rm_newline_hyphenation,
-        preprocessing_dfcol.rm_newline,    
-        preprocessing_df_filter.filter_no_real_words_g3letter, 
-        # preprocessing_df_filter.filter_l80_real_words,
-        # preprocessing_dfcol.tokenize_spacy_lg,
-        # preprocessing_dfcol.rm_stopwords_spacy,
-    ]
+        # 
+        for i, pipe_step in enumerate(pipeline):
+            if pipe_step.__module__.split('.')[-1] == 'preprocessing_df_filter':
+                data_ = pipe_step(data_, args.desc_col)
+            else:
+                data_[args.desc_col] = pipe_step(data_[args.desc_col])
+            print(f'step {i}/{len(pipeline)} finished')
 
-    # 
-    for i, pipe_step in enumerate(pipeline):
-        if pipe_step.__module__.split('.')[-1] == 'preprocessing_df_filter':
-            data_ = pipe_step(data_, args.desc_col)
-        else:
-            data_[args.desc_col] = pipe_step(data_[args.desc_col])
-        print(f'step {i}/{len(pipeline)} finished')
+        # 
+        post_processing = [
+            preprocessing_str.rm_punct,     
+            preprocessing_str.lower,
+            preprocessing_str.rm_newline
+        ]
 
-    # 
-    post_processing = [
-        preprocessing_str.rm_punct,     
-        preprocessing_str.lower,
-        preprocessing_str.rm_newline
-    ]
-
-    # 
-    for i, pipe_step in enumerate(post_processing):
-        data_[args.desc_col] = data_[args.desc_col].apply(pipe_step)
-        print(f'step {i}/{len(post_processing)} finished')
+        # 
+        for i, pipe_step in enumerate(post_processing):
+            data_[args.desc_col] = data_[args.desc_col].apply(pipe_step)
+            print(f'step {i}/{len(post_processing)} finished')
 
     # 
     data_ = data_.drop(columns=['letter_count', 'is_enchant_word', 'word_char_num', 'is_enchant_word_and_g3l', 'any_enchant_word_and_g3l', 'real_words', 'real_words_n', 'real_words_perc', 'n_words', 'Shape_Area'], errors='ignore')
