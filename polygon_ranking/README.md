@@ -13,14 +13,12 @@ Download these two zipped files and extract them to your local machine.
 ### Setup environment
 1. Install Anaconda
    - https://docs.anaconda.com/anaconda/install/mac-os/
-2. Install Homebrew
-   - https://brew.sh/
-3. Install the enchant C-library
+2. (Optional) Install [Homebrew](https://brew.sh/) & the enchant C-library
+   -  `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
    - `brew update`
    - `brew install enchant`
-4. Make brew libraries, e.g. enchant, discoverable by conda python
-   - https://github.com/pyenchant/pyenchant/issues/265#issuecomment-998965819
-5. Pick a work directory
+   - Make brew libraries, e.g. enchant, discoverable by conda python([link](https://github.com/pyenchant/pyenchant/issues/265#issuecomment-998965819))
+3. Go to a work directory
    - `git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git`
    - `cd sri-ta2-mappable-criteria/polygon_ranking`
    - `conda create -n sri-map-synth python=3.10`
