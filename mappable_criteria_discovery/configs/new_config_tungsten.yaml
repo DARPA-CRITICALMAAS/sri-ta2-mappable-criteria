@@ -1,0 +1,8 @@
+- &base !include base_config.yaml
+- <<: *base
+  name: default
+  deposit_type: Tungsten Skarn
+  minmod_url: https://minmod.isi.edu/resource/
+  deposit_type_Qnum: ['Q447']
+  data_dir: data/data_tungsten_skarn
+  log_dir: logs/logs_tungsten
