@@ -36,6 +36,19 @@ python polygon_ranking.py preproc \
 --output /path/to/output/SGMC_preproc_v1.parquet
 ```
 2. ranking (map synthesis)
+
+Running on one deposit type (with optional boundary file):
+```bash
+python polygon_ranking.py rank \
+--processed_input /path/to/output/SGMC_preproc_v1.parquet \
+--deposit_type mvt_zinc_lead hectorite_li \
+--hf_model iaross/cm_bert \
+--boundary /path/to/boundary.zip \
+--normalize \
+--output_dir /path/to/output/rank
+```
+
+Running on one deposit type (or a list of deposit types):
 ```bash
 python polygon_ranking.py rank \
 --processed_input /path/to/output/SGMC_preproc_v1.parquet \
@@ -43,6 +56,20 @@ python polygon_ranking.py rank \
 --hf_model iaross/cm_bert \
 --normalize \
 --output_dir /path/to/output/rank
+```
+
+Running on a list of deposit type with boundary files for each (see `data.txt` for an example):
+```bash
+while IFS=':' read -r dep boundary
+do
+    echo python polygon_ranking.py rank \
+    --processed_input /path/to/output/SGMC_preproc_v1.parquet \
+    --deposit_type $dep \
+    --hf_model iaross/cm_bert \
+    --normalize \
+    --boundary $boundary \
+    --output_dir /path/to/output/rank 
+done <data.txt
 ```
 
 ## Linux user
