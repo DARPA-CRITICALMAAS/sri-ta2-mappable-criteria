@@ -3,5 +3,3 @@ output_preproc
 output_rank
 raster
 TA1_polygon_outputs
-**.DS_Store
-**/__pycache__/
