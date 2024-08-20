@@ -1,5 +1,6 @@
 
 import argparse
+import sys
 import os
 import ipdb
 import itertools
@@ -22,9 +23,17 @@ try:
     print("Successfully imported nrcan_p2 modules ... ")
 except Exception as e:
     use_nrcan_p2 = False
-    print("Error importing nrcan_p2 modules ... ")
+    print("Error importing nrcan_p2 modules ... skip")
 
 from deposit_models import systems_dict
+
+try:
+    from gooey import Gooey, GooeyParser
+    use_gooey = True
+    print("Successfully imported Gooey ...")
+except Exception as e:
+    use_gooey = False
+    print("Failed to import Gooey ... skip")
 
 
 def dfcol_sep_hyphen(dfcol):
@@ -348,8 +357,12 @@ def nullable_string(val):
         return None
     return val
 
+if len(sys.argv) >= 2:
+    if not '--ignore-gooey' in sys.argv:
+        sys.argv.append('--ignore-gooey')
 
-if __name__ == '__main__':
+@Gooey
+def main():
     parser = argparse.ArgumentParser()
     parsers = parser.add_subparsers(dest='task')
 
@@ -379,3 +392,5 @@ if __name__ == '__main__':
         rank(args)
 
 
+if __name__ == '__main__':
+    main()
