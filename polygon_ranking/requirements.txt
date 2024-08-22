@@ -23,5 +23,7 @@ pytablewriter==1.2.0
 requests
 mapbox-vector-tile 
 httpx
+gooey
+rasterio
 # python -m spacy download en_core_web_sm
 # python -m spacy download en_core_web_lg
