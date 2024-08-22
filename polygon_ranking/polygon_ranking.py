@@ -3,14 +3,17 @@ import argparse
 import sys
 import os
 import ipdb
+import json
 import itertools
 from tqdm import tqdm
+from datetime import datetime
 
 import numpy as np
 from scipy.stats import rankdata, norm
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
 import geopandas as gpd
+from shapely.geometry import shape
 from matplotlib import pyplot as plt
 
 from sentence_transformers import SentenceTransformer
@@ -26,6 +29,14 @@ except Exception as e:
     print("Error importing nrcan_p2 modules ... skip")
 
 from deposit_models import systems_dict
+import rasterio
+from rasterio.transform import from_origin
+from rasterio.features import rasterize
+from rasterio.mask import mask
+from rasterio.warp import calculate_default_transform, reproject, Resampling
+from rasterio.transform import from_bounds
+
+# from raster import vector_to_raster
 
 try:
     from gooey import Gooey, GooeyParser
@@ -82,7 +93,6 @@ def least_cor_subset(corcoef, n):
 
     min_cor = 1
     min_sub = None
-    # ipdb.set_trace()
     for sub in comb:
         sub_cor = corcoef[np.ix_(sub, sub)]
         if sub_cor.mean() < min_cor:
@@ -180,7 +190,6 @@ def rank_polygon(descriptive_model, embed_model, data_, args):
     if args.negatives is not None:
         with open(args.negatives, 'r') as f:
             neg_desc = [line.strip() for line in f.readlines()]
-        # ipdb.set_trace()
         query_vec_neg = convert_text_to_vector_hf(neg_desc, embed_model)
         cos_sim_neg = cosine_similarity(query_vec_neg, polygon_vectors)
         cos_sim_neg = cos_sim_neg.mean(axis=0)
@@ -189,14 +198,14 @@ def rank_polygon(descriptive_model, embed_model, data_, args):
 
     query_vec = {}
     cos_sim = {}
-    # ipdb.set_trace()
+    prefix = 'bge_'
     for key in descriptive_model:
         query_vec[key] = convert_text_to_vector_hf([descriptive_model[key]],  embed_model)
-        cos_sim[key] = cosine_similarity(query_vec[key], polygon_vectors)[0]
+        cos_sim[prefix+key] = cosine_similarity(query_vec[key], polygon_vectors)[0]
         if args.normalize:
-            cos_sim[key] = normalize(cos_sim[key])
+            cos_sim[prefix+key] = normalize(cos_sim[prefix+key])
         if args.negatives is not None:
-            cos_sim[key] = 0.5 * cos_sim[key] + 0.5* (1 - cos_sim_neg)
+            cos_sim[prefix+key] = 0.5 * cos_sim[prefix+key] + 0.5* (1 - cos_sim_neg)
 
     try: 
         cos_sim_age_min = cosine_similarity(query_vec['age_range'], polygon_vectors_age_min)[0]
@@ -208,16 +217,13 @@ def rank_polygon(descriptive_model, embed_model, data_, args):
 
     bge_all = 0
     for key in cos_sim:
-        tmp = cos_sim[key]
-        # tmp_color = float_to_color(tmp)
-        bge_all += tmp
-        data_['bge_'+key] = pd.Series(list(tmp))
-        # data_['bge_'+key+'_color'] = pd.Series(list(tmp_color))
-
+        bge_all += cos_sim[key]
     bge_all /= len(cos_sim)
-    # bge_all_color = float_to_color(bge_all)
-    data_['bge_all'] = pd.Series(list(bge_all))
-    # data_['bge_all_color'] = pd.Series(list(bge_all_color))
+    cos_sim[prefix+'all'] = bge_all
+
+    for key in cos_sim:
+        data_[key] = pd.Series(list(cos_sim[key]))
+
     return data_, cos_sim
 
 
@@ -300,6 +306,124 @@ def preproc(args):
     data_ = data_.reset_index(drop=True)
     data_.to_parquet(args.output)
 
+# gdal_rasterize -l INPUT -a bge_rock_types -tr 500.0 500.0 -a_nodata -999999999.0 -te -2172461.4858 -440121.7157 -1371280.9898 625861.5866 -ot Float32 -of GTiff /private/var/folders/w6/d6h1p8vj7nn7vd1b9gzs91w9hsmt06/T/processing_pFneTk/5d52324c53b94419898403dec8350886/INPUT.gpkg /private/var/folders/w6/d6h1p8vj7nn7vd1b9gzs91w9hsmt06/T/processing_pFneTk/5395a60f367c4cb2933c4a93205b393d/OUTPUT.tif
+
+def reproject(gdf, dst_crs='esri:102008'):
+    geometry = rasterio.warp.transform_geom(
+        src_crs=gdf.crs,
+        dst_crs=dst_crs,
+        geom=gdf.geometry.values,
+    )
+    gdf_reprojected = gdf.set_geometry(
+        [shape(geom) for geom in geometry],
+        crs=dst_crs,
+    )
+    return gdf_reprojected
+
+
+def rasterize_column(gdf, column, out_tif, pixel_size=500, fill_nodata=0):
+    # Determine the bounds and resolution of the output raster
+    minx, miny, maxx, maxy = gdf.total_bounds
+    width = int((maxx - minx) / pixel_size)
+    height = int((maxy - miny) / pixel_size)
+    
+    # Define the transformation (affine transform) for the raster
+    out_transform = from_origin(minx, maxy, pixel_size, pixel_size)
+    # out_img, out_transform = mask(raster=data, shapes=coords, crop=True)
+    
+    # Prepare the shapes (geometry, value) pairs for rasterization
+    shapes = ((geom, value) for geom, value in zip(gdf.geometry, gdf[column]))
+
+    # Use rasterio.features.rasterize to create the rasterized array
+    raster_data = rasterize(
+        shapes=shapes,
+        out_shape=(height, width),
+        fill=fill_nodata,  # Default fill value for empty pixels
+        transform=out_transform,
+        dtype=rasterio.float32
+    )
+    
+    # Write the data to a .tif file
+    with rasterio.open(
+        out_tif, 'w', driver='GTiff', height=height, width=width,
+        count=1, dtype=rasterio.float32, crs=gdf.crs.to_string(),
+        transform=out_transform
+    ) as dst:
+        dst.write(raster_data, 1)
+    return height, width
+
+def rasterize_column_(gdf, layer, cut_line, out_tif, target_crs='ESRI:102008', pixel_size=500, fill_nodata=-10e9):
+    # 1. reproject vector data
+    gdf = gdf.to_crs(target_crs)
+
+    minx, miny, maxx, maxy = cut_line.total_bounds
+    extent = [minx, miny, maxx, maxy]
+    print(extent)
+
+    # 2. Rasterize vector data
+    transform = from_bounds(*extent, width=int((extent[2] - extent[0]) / pixel_size), height=int((extent[3] - extent[1]) / pixel_size))
+    out_shape = (int((extent[3] - extent[1]) / pixel_size), int((extent[2] - extent[0]) / pixel_size))
+
+    raster = rasterize(
+        ((geom, value) for geom, value in zip(gdf.geometry, gdf[layer])),
+        out_shape=out_shape,
+        transform=transform,
+        fill=fill_nodata,
+        dtype='float32'
+    )
+    raster = np.where(raster > 0, raster, 0)
+    print('raster shape', raster.shape)
+
+    # Save the rasterized image temporarily
+    temp_raster = out_tif.replace('.tif', '.temp.tif')
+    with rasterio.open(
+            temp_raster, 'w',
+            driver='GTiff',
+            height=raster.shape[0], width=raster.shape[1],
+            count=1, dtype='float32',
+            crs=target_crs,
+            transform=transform,
+            nodata=fill_nodata) as dst:
+        dst.write(raster, 1)
+
+    # 3. Warp and clip the raster
+    with rasterio.open(temp_raster) as src:
+        # Mask the raster using the cutline
+        out_image, out_transform = mask(src, cut_line.geometry, crop=True, nodata=fill_nodata)
+        out_image = out_image[0]
+        print('out_image shape', out_image.shape)
+        # Update metadata after clipping
+        out_meta = src.meta.copy()
+        out_meta.update({
+            "driver": "GTiff",
+            "height": out_image.shape[0],
+            "width": out_image.shape[1],
+            "transform": out_transform,
+            "nodata": fill_nodata
+        })
+
+        # Write the masked (clipped) raster to a new file
+        with rasterio.open(out_tif, "w", **out_meta) as dst:
+            dst.write(out_image, 1)
+
+
+
+def make_metadata(layer, height, width, version, deposit_type, cma_no):
+    metadata = {
+        "DOI": "none",
+        "authors": [f"sri-ta2-EviSynth-{version}"],
+        "publication_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "category": "geology",
+        "subcategory": layer,
+        "description": "SRI text embedding layers",
+        "derivative_ops": "none",
+        "type": "continuous",
+        "resolution": [str(height), str(width)],
+        "format": "tif",
+        "evidence_layer_raster_prefix": f"sri-EviSynth-{version}_{cma_no}_{deposit_type}_{layer}",
+        "download_url": "none",
+    }
+    return metadata
 
 
 def rank(args):
@@ -320,6 +444,8 @@ def rank(args):
     for deposit_type in args.deposit_type:
 
         gpd_data, cos_sim = rank_polygon(systems_dict[deposit_type], embed_model, data_, args)
+        # gpd_data = gpd_data.to_crs('EPSG:3857')  # better for rendering in *GIS
+        gpd_data = gpd_data.to_crs('ESRI:102008')
 
         if args.boundary is not None and len(args.boundary) > 0:
             # intersection
@@ -331,13 +457,31 @@ def rank(args):
         gpkg_fname = os.path.join(args.output_dir, f"{input_fname}.{deposit_type}.gpkg")
         gpd_data.to_file(gpkg_fname, driver="GPKG")
 
-        att_list = list(cos_sim.keys())
-        scores = np.stack([cos_sim[k] for k in att_list])
-        fig, ax = plt.subplots()
-        ax.matshow(np.corrcoef(scores))
-        plt.savefig(os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{deposit_type}.png"))
-        min_cor_subset = least_cor_subset(np.corrcoef(scores), 4)
-        print([att_list[i] for i in min_cor_subset])
+        if False:
+            att_list = list(cos_sim.keys())
+            scores = np.stack([cos_sim[k] for k in att_list])
+            fig, ax = plt.subplots()
+            ax.matshow(np.corrcoef(scores))
+            plt.savefig(os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{deposit_type}.png"))
+            min_cor_subset = least_cor_subset(np.corrcoef(scores), 4)
+            print([att_list[i] for i in min_cor_subset])
+
+        # rasterization
+        for layer in cos_sim:  # Replace with your column names
+            out_tif_dir = os.path.join(args.output_dir, f"{input_fname}.{deposit_type}.raster")
+            os.makedirs(out_tif_dir, exist_ok=True)
+
+            out_tif = os.path.join(out_tif_dir, f'{layer}.tif')
+            print(f'rasterizing {out_tif} ...')
+            res = 500
+            rasterize_column_(
+                gpd_data, layer, area, out_tif, pixel_size=res, fill_nodata=-10e9
+            )
+
+            metadata = make_metadata(layer, res, res, args.version, deposit_type, args.cma_no)
+            with open(out_tif.replace('.tif', '.json'), 'w') as f:
+                json.dump(metadata, f)
+
     # else:
     #     gpd_data, cos_sim = rank_polygon(systems_dict[args.deposit_type], embed_model, data_, args)
     #     gpkg_fname = os.path.join(args.output_dir, f"{args.processed_input.split('/')[-1]}.{args.deposit_type}.gpkg")
@@ -381,6 +525,8 @@ def main():
     rank_parser.add_argument('--normalize', action='store_true', default=False)
     rank_parser.add_argument('--boundary', type=nullable_string, default=None)
     rank_parser.add_argument('--output_dir', type=str, default='output_rank')
+    rank_parser.add_argument('--version', type=str, default='v1')
+    rank_parser.add_argument('--cma_no', type=str, default='hack')
 
     args = parser.parse_args()
 
