@@ -29,7 +29,7 @@ def find_largest_indices(A, B):
 cdr_token = os.environ['CMAAS_CDR_KEY']
 print(cdr_token)
 
-output_dir = '/data/meng/datalake/cmaas-ta2/k8s/meng/mappable_criteria/sri-ta2-mappable-criteria/polygon_ranking/TA1/CMA6'
+output_dir = 'TA1/CMA6'
 
 client = cdrc.CDRClient(
     token=cdr_token,
@@ -117,3 +117,26 @@ client.build_cma_geopackages(
 #         system_versions=[(system, system_version)],
 #         validated=None
 #     )
+
+# v1/features/intersect_package
+# {
+#   "cog_ids": [],
+#   "category": "polygon",
+#   "system_versions": [],
+#   "search_text": "",
+#   "search_terms": [],
+#   "legend_ids": [],
+#   "validated": null,
+#   "intersect_polygon": {
+#     "type": "Polygon",
+#     "coordinates": [
+#        [
+#             [-122.0, 43.0],
+#             [-122.0, 35.0], 
+#             [-114.0, 35.0], 
+#             [-114.0, 43.0], 
+#             [-122.0, 43.0]
+#        ]
+#     ]
+#   }
+# }
