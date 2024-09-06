@@ -30,6 +30,22 @@ systems_dict = {
         'geochemical_signatures': 'W, Cu, Mo, As, Bi, and B. Less commonly Zn, Pb, Sn, Be, and F.',
         'geophysical_signature': 'Magnetic and induced polarization surveys can be used to outline the surface projection of ore bodies because magnetite, pyrrhotite, and other sulfide minerals are common in these deposits. Although skarns typically have a positive density contrast relative to adjacent intrusions and carbonate rocks, gravity surveys are not commonly used due to high cost and nonspecificity for ore. Remote-sensing techniques can effectively identify carbonate terranes and iron enrichment in skarns if skarn is exposed. In some cases, contacts between intrusions and sedimentary rocks can be mapped and carbonate rocks can be distinguished from noncarbonate rocks.'
     },
+    'tungsten_skarn_v2': {
+        'deposit_type': 'tungsten skarn',
+        'synonyms': 'Pyrometasomatic or contact metasomatic tungsten deposits.',
+        'commodities': 'W, Mo, Cu, Sn, Zn',
+        'description': 'Scheelite-dominant mineralization genetically associated with a skarn gangue.',
+        'rock_types_host': 'limestones, calcareous to carbonaceous pelites.',
+        'rock_types_source': 'tonalite, granodiorite, quartz monzonite and granite.',
+        'age_range': 'Mainly Mesozoic, but may be any age.',
+        'depositional_environment': 'Contacts and roof pendants of batholith and thermal aureoles of apical zones of stocks that intrude carbonate rocks.',
+        'tectonic_setting': 'Continental margin, synorogenic plutonism intruding deeply buried sequences of eugeoclinal carbonate-shale sedimentary rocks. Can develop in tectonically thickened packages in back-arc thrust settings.',
+        'ore_mineralogy': 'Scheelite ± molybdenite ± chalcopyrite ±pyrrhotite ± sphalerite ± arsenopyrite ± pyrite ± powellite. May contain trace wolframite, fluorite, cassiterite, galena, marcasite and bornite. Reduced types are characterized by pyrrhotite, magnetite, bismuthinite, native bismuth and high pyrrhotite:pyrite ratios. Variable amounts of quartz-vein stockwork (with local molybdenite) can cut both the exoskarn and endoskarn',
+        'alteration': 'Exoskarn alteration: Inner zone of diopside-hedenbergite±grossular-andradite±biotite±vesuvianite, with outer barren wollastonite-bearing zone. An innermost zone of massive quartz may be present. Late stage spessartine±almandine±biotite±amphibole±plagioclase±phlogopite±epidote±fluorite±sphene. Exoskarn envelope can be associated with extensive areas of biotite hornfels. Endoskarn alteration: Pyroxene±garnet±biotite±epidote±amphibole±muscovite±plagioclase±pyrite±pyrrhotite±trace tourmaline and scapolite; local greisen developed.',
+        'ore_controls': 'Carbonate rocks in extensive thermal aureoles of intrusions; gently inclined bedding and intrusive contacts; structural and (or) stratigraphic traps in sedimentary rocks and irregular parts of the pluton/country rock contacts.',
+        'geochemical_signatures': 'W, Cu, Mo, As, Bi, and B. Less commonly Zn, Pb, Sn, Be, and F.',
+        'geophysical_signature': 'Magnetic and induced polarization surveys can be used to outline the surface projection of ore bodies because magnetite, pyrrhotite, and other sulfide minerals are common in these deposits. Although skarns typically have a positive density contrast relative to adjacent intrusions and carbonate rocks, gravity surveys are not commonly used due to high cost and nonspecificity for ore. Remote-sensing techniques can effectively identify carbonate terranes and iron enrichment in skarns if skarn is exposed. In some cases, contacts between intrusions and sedimentary rocks can be mapped and carbonate rocks can be distinguished from noncarbonate rocks.'
+    },
     'mvt_zinc_lead': {
         'synonyms': 'Carbonate-hosted Pb-Zn; Mississippi Valley type',
         'description': 'Stratabound, carbonate-hosted deposits of galena, sphalerite, and chalcopyrite in rocks having primary and secondary porosity, commonly related to reefs on paleotopographic highs (see fig. 166). (For grade-tonnage model see Appalachian Zn deposit model.)',
