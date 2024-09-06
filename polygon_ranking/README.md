@@ -25,7 +25,7 @@ Download these two zipped files and extract them to your local machine.
    - `conda activate sri-map-synth`
    - `pip install -r requirements.txt`
 
-### Generate maps
+### Generate maps (with SGMC database)
 1. preprocessing
 ```bash
 python polygon_ranking.py preproc \
@@ -69,6 +69,71 @@ do
     --output_dir /path/to/output/rank 
 done <data.txt
 ```
+
+### Generate maps (with TA1 polygons)
+1. Fetching TA1 polygons from CDR
+- Go to [CDR](https://api.cdr.land/docs#/Features/package_extraction_features_with_intersect_v1_features_intersect_package_post)
+- Put search parameters into the request body and hit `Execute`, here is an example:
+```
+{
+  "cog_ids": [],
+  "category": "polygon",
+  "system_versions": [["umn-usc-inferlink", "0.0.5"]],
+  "search_text": "",
+  "search_terms": [],
+  "legend_ids": [],
+  "validated": null,
+  "intersect_polygon": {
+    "type": "Polygon",
+    "coordinates": [
+       [
+            [-122.0, 43.0],
+            [-122.0, 35.0], 
+            [-114.0, 35.0], 
+            [-114.0, 43.0], 
+            [-122.0, 43.0]
+       ]
+    ]
+  }
+}
+```
+- Copy the `job_id` from response body, e.g., `"d994c1f864704b5e98e794a0a68eae8d"`.
+- Check job status [here](https://api.cdr.land/docs#/Jobs/job_status_by_id_v1_jobs_status__job_id__get)
+- Download job results [here](https://api.cdr.land/docs#/Jobs/job_result_by_id_v1_jobs_result__job_id__get)
+- Extract the `.zip` results file into a folder:
+```
+.
+├── d994c1f864704b5e98e794a0a68eae8d
+│   ├── 2c352cf5057906e906ed25f524f42876232619240af54b2509f509e56a6d03a4__umn-usc-inferlink__0.0.5____ al fan_polygon_features.gpkg
+│   ├── 2c352cf5057906e906ed25f524f42876232619240af54b2509f509e56a6d03a4__umn-usc-inferlink__0.0.5____ and pelitic 2wer pa_polygon_features.gpkg
+│   ├── 2c352cf5057906e906ed25f524f42876232619240af54b2509f509e56a6d03a4__umn-usc-inferlink__0.0.5____ and pelitic_polygon_features.gpkg
+│   ├── 2c352cf5057906e906ed25f524f42876232619240af54b2509f509e56a6d03a4__umn-usc-inferlink__0.0.5____ ar tills_polygon_features.gpkg
+│   ├── 2c352cf5057906e906ed25f524f42876232619240af54b2509f509e56a6d03a4__umn-usc-inferlink__0.0.5____ cathedral e_polygon_features.gpkg
+│   ├── 2c352cf5057906e906ed25f524f42876232619240af54b2509f509e56a6d03a4__umn-usc-inferlink__0.0.5____ ger advance se eee_polygon_features.gpkg
+│   ├── 2c352cf5057906e906ed25f524f42876232619240af54b2509f509e56a6d03a4__umn-usc-inferlink__0.0.5____ interbeds_polygon_features.gpkg
+```
+
+2. Combining all result files into a single `.gpkg` file
+```bash
+python combine_TA1_polygons.py --dir /path/to/d994c1f864704b5e98e794a0a68eae8d/
+```
+This command will create a file at `/path/to/d994c1f864704b5e98e794a0a68eae8d.gpkg`
+
+3. Ranking (map synthesis)
+```bash
+python polygon_ranking.py rank \
+--processed_input /path/to/d994c1f864704b5e98e794a0a68eae8d.gpkg \
+--deposit_type tungsten_skarn_v1 \
+--hf_model iaross/cm_bert \
+--boundary /path/to/boundary.gpkg \
+--normalize \
+--output_dir /path/to/output/rank \
+--version v1.1 \
+--cma_no 12hack
+```
+
+### Push output to CDR
+
 
 ## Linux user
 ### Build docker image
