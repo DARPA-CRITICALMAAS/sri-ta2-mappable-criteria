@@ -122,7 +122,7 @@ client.build_cma_geopackages(
 # {
 #   "cog_ids": [],
 #   "category": "polygon",
-#   "system_versions": [],
+#   "system_versions": [["golden_muscat", "0.4.4"]],
 #   "search_text": "",
 #   "search_terms": [],
 #   "legend_ids": [],
