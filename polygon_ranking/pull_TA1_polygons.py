@@ -122,7 +122,7 @@ client.build_cma_geopackages(
 # {
 #   "cog_ids": [],
 #   "category": "polygon",
-#   "system_versions": [["golden_muscat", "0.4.4"]],
+#   "system_versions": [["umn-usc-inferlink", "0.0.5"]],
 #   "search_text": "",
 #   "search_terms": [],
 #   "legend_ids": [],
