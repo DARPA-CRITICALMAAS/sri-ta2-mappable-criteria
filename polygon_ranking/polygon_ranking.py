@@ -434,7 +434,7 @@ def rank(args):
         data_ = gpd.read_file(args.processed_input)
     
     data_ = data_[~data_[args.desc_col].isna()]
-    embed_model = SentenceTransformer(args.hf_model)
+    embed_model = SentenceTransformer(args.hf_model, trust_remote_code=True)
 
     # full_desc = data_[args.desc_col].to_list()
 
