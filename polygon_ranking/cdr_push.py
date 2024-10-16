@@ -17,10 +17,11 @@ def push_to_cdr(cdr_key, metadata, filepath):
         'input_file': (filepath.split('/')[-1], open(filepath, 'rb'), 'image/tiff')
     }
 
-    response = requests.post(url, headers=headers, files=files)
 
-    print(response.status_code)
-    print(response.json())
+    response = requests.post(url, headers=headers, files=files)
+    # print(response.status_code)
+    # print(response.json())
+    return response
 
 
 
