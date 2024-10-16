@@ -28,7 +28,7 @@ except Exception as e:
     use_nrcan_p2 = False
     print("Error importing nrcan_p2 modules ... skip")
 
-from deposit_models import systems_dict
+# from deposit_models import systems_dict
 import rasterio
 from rasterio.transform import from_origin
 from rasterio.features import rasterize
@@ -174,6 +174,35 @@ def normalize(array):
 
 def float_to_color(array):
     return ((array-array.min()) * (1/(array.max()-array.min()+1e-12)*255)).astype('uint8')
+
+
+def rank_polygon_single_query(query, embed_model, data, desc_col=None, polygon_vec=None, norm=True, negative_query=None):
+    assert not (desc_col is None and polygon_vec is None)
+    if polygon_vec is None:
+        polygon_vec = convert_text_to_vector_hf(data[desc_col].to_list(), embed_model)
+
+    if negative_query is not None:
+        query_vec_neg = convert_text_to_vector_hf(negative_query, embed_model)
+        cos_sim_neg = cosine_similarity(query_vec_neg, polygon_vec)
+        cos_sim_neg = cos_sim_neg.mean(axis=0)
+        if norm:
+            cos_sim_neg = normalize(cos_sim_neg)
+
+    query_vec = {}
+    cos_sim = {}
+    prefix = ''
+    for key in query:
+        query_vec[key] = convert_text_to_vector_hf([query[key]],  embed_model)
+        cos_sim[prefix+key] = cosine_similarity(query_vec[key], polygon_vec)[0]
+        if norm:
+            cos_sim[prefix+key] = normalize(cos_sim[prefix+key])
+        if negative_query is not None:
+            cos_sim[prefix+key] = 0.5 * cos_sim[prefix+key] + 0.5* (1 - cos_sim_neg)
+
+    for key in cos_sim:
+        data[key] = pd.Series(list(cos_sim[key]))
+
+    return data, cos_sim
 
 
 def rank_polygon(descriptive_model, embed_model, data_, args):
@@ -414,8 +443,8 @@ def make_metadata(layer, height, width, version, deposit_type, cma_no):
         "authors": [f"sri-ta2-EviSynth-{version}"],
         "publication_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "category": "geology",
-        "subcategory": layer,
-        "description": "SRI text embedding layers",
+        "subcategory": f"SRI text embedding layers - {version}",
+        "description": f"{cma_no}-{layer}",
         "derivative_ops": "none",
         "type": "continuous",
         "resolution": [str(height), str(width)],
@@ -438,6 +467,8 @@ def rank(args):
 
     # full_desc = data_[args.desc_col].to_list()
 
+    with open(args.deposit_models, 'r') as f:
+        systems_dict = json.load(f)
     if len(args.deposit_type) == 0:
         args.deposit_type = list(systems_dict.keys())
 
@@ -520,12 +551,13 @@ def main():
     rank_parser.add_argument('--processed_input', type=str, default='output_preproc/merged_table_processed.parquet')
     rank_parser.add_argument('--desc_col', type=str, default="full_desc")
     rank_parser.add_argument('--hf_model', type=str, default='iaross/cm_bert')
+    rank_parser.add_argument('--deposit_models', type=str, default='deposit_models/deposit_models.json')
     rank_parser.add_argument('--deposit_type', type=str, nargs='+', default=[])
     rank_parser.add_argument('--negatives', type=str, default=None)
     rank_parser.add_argument('--normalize', action='store_true', default=False)
     rank_parser.add_argument('--boundary', type=nullable_string, default=None)
     rank_parser.add_argument('--output_dir', type=str, default='output_rank')
-    rank_parser.add_argument('--version', type=str, default='v1')
+    rank_parser.add_argument('--version', type=str, default='v1.1')
     rank_parser.add_argument('--cma_no', type=str, default='hack')
 
     args = parser.parse_args()
