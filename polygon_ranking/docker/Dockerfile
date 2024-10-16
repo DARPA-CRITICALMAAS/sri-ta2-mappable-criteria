@@ -1,6 +1,17 @@
 # FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
 FROM python:3.9-slim
-RUN apt-get update && apt-get install -y git vim gcc g++ curl tini libenchant-2-dev libgtk-3-dev
+RUN apt-get update && apt-get install -y \
+    git \
+    vim \
+    gcc \
+    g++ \
+    curl \
+    tini \
+    libenchant-2-dev \
+    libgtk-3-dev \
+    libgdal-dev \
+    gdal-bin
+
 WORKDIR /workdir
 
 # COPY requirements.txt ./
