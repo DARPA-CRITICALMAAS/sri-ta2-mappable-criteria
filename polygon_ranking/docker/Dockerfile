@@ -1,5 +1,6 @@
 # FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
-FROM python:3.9-slim
+# FROM python:3.9-slim
+FROM andrejreznik/python-gdal:py3.12.4-gdal3.9.1
 RUN apt-get update && apt-get install -y \
     git \
     vim \
@@ -7,10 +8,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     curl \
     tini \
-    libenchant-2-dev \
-    libgtk-3-dev \
-    libgdal-dev \
-    gdal-bin
+    libenchant-2-dev
 
 WORKDIR /workdir
 
@@ -28,5 +26,5 @@ RUN git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.gi
 RUN pip3 install -r /workdir/sri-ta2-mappable-criteria/polygon_ranking/requirements.txt
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
-WORKDIR sri-ta2sri-ta2-mappable-criteria
+WORKDIR /workdir/sri-ta2sri-ta2-mappable-criteria
 ENTRYPOINT ["streamlit", "run", "Welcome.py", "--server.port=8501", "--server.address=0.0.0.0"]
