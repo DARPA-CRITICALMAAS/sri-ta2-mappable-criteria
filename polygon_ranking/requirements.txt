@@ -24,10 +24,11 @@ requests
 mapbox-vector-tile 
 httpx
 gooey
+gdal
+fiona
 rasterio
 # python -m spacy download en_core_web_sm
 # python -m spacy download en_core_web_lg
-cdrc
 # brew install freetype imagemagick
 streamlit
 leafmap
