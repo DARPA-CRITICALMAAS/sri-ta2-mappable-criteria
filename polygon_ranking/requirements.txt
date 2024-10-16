@@ -29,3 +29,7 @@ rasterio
 # python -m spacy download en_core_web_lg
 cdrc
 # brew install freetype imagemagick
+streamlit
+leafmap
+xarray
+localtileserver
