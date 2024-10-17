@@ -24,7 +24,7 @@ requests
 mapbox-vector-tile 
 httpx
 gooey
-gdal==3.6.2
+gdal>=3.6.2
 fiona
 rasterio
 # python -m spacy download en_core_web_sm
