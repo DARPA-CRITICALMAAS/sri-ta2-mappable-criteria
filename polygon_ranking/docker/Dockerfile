@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y \
     g++ \
     curl \
     tini \
-    libenchant-2-dev
+    libenchant-2-dev \
+    libgtk-3-dev
 
 WORKDIR /workdir
 
