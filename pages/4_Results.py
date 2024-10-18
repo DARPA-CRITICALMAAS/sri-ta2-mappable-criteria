@@ -12,17 +12,14 @@ import subprocess
 from polygon_ranking.cdr_push import push_to_cdr
 
 
-workdir = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/sri-ta2-mappable-criteria"
-workdir_output = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/output"
-
-st.logo("pages/images/SRI_logo_black.png", size="large")
+st.logo(st.session_state['logo'], size="large")
 
 st.set_page_config(
     page_title="page 5",
     layout="wide"
 )
 
-map_dir = os.path.join(workdir_output, 'rank')
+map_dir = st.session_state['text_emb_layers']
 
 
 results = [d for d in os.listdir(map_dir) if os.path.isdir(os.path.join(map_dir, d))]
@@ -32,20 +29,22 @@ selected_dir = st.selectbox(
     results,
     key='tab3.results'
 )
-cmas = os.listdir(os.path.join(map_dir, selected_dir))
-cmas = list(set([f.replace('.gpkg', '').replace('.raster', '') for f in cmas]))
 
-selected_cma = st.selectbox(
-    "choose a cma",
-    cmas,
-    key='tab3.cma'
-)
+if selected_dir:
+    cmas = os.listdir(os.path.join(map_dir, selected_dir))
+    cmas = list(set([f.replace('.gpkg', '').replace('.raster', '') for f in cmas]))
 
-cma = os.path.join(map_dir, selected_dir, selected_cma)
+    selected_cma = st.selectbox(
+        "choose a cma",
+        cmas,
+        key='tab3.cma'
+    )
 
-cma_raster_dir = cma + '.raster'
-layers = list(set([f.split('.')[0] for f in os.listdir(cma_raster_dir)]))
-
+    cma = os.path.join(map_dir, selected_dir, selected_cma)
+    cma_raster_dir = cma + '.raster'
+    layers = list(set([f.split('.')[0] for f in os.listdir(cma_raster_dir)]))
+else:
+    layers = []
 
 color_maps = ["Blues", "Greens", "Oranges", "Reds", "Purples"]
 m = leafmap.Map(
@@ -55,8 +54,10 @@ m = leafmap.Map(
         max_zoom=20,
         min_zoom=2,
     )
-for l in layers:
-    m.add_raster(os.path.join(cma_raster_dir, l+'.tif'), colormap="plasma", layer_name=l)
+
+for i, l in enumerate(layers):
+    m.add_raster(os.path.join(cma_raster_dir, l+'.tif'), colormap=color_maps[i%len(color_maps)], layer_name=l)
+    
 m.to_streamlit(height=800)
 
 to_view = None

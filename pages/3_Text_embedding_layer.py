@@ -3,6 +3,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import json
+import argparse
 import random
 import string
 import os
@@ -12,7 +13,7 @@ import sys
 import subprocess
 import leafmap.foliumap as leafmap
 from polygon_ranking.cdr_push import push_to_cdr
-from polygon_ranking.polygon_ranking import convert_text_to_vector_hf, rank_polygon_single_query
+from polygon_ranking.polygon_ranking import convert_text_to_vector_hf, rank_polygon_single_query, rank, nullable_string
 from sentence_transformers import SentenceTransformer
 from branca.colormap import linear
 
@@ -33,7 +34,7 @@ def stream_stdout(process):
     else:
         raise st.warning("Job failed!")
 
-st.logo("pages/images/SRI_logo_black.png", size="large")
+st.logo(st.session_state['logo'], size="large")
 
 st.set_page_config(
     page_title="page3",
@@ -41,21 +42,16 @@ st.set_page_config(
 )
 
 # Paths
-workdir = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/sri-ta2-mappable-criteria"
-workdir_output = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/output"
+download_dir_sgmc = st.session_state['download_dir_sgmc']
+download_dir_ta1 = st.session_state['download_dir_ta1']
 
-download_dir = os.path.join(workdir_output, "download")
-download_dir_sgmc = os.path.join(download_dir, "sgmc")
-download_dir_ta1 = os.path.join(download_dir, "ta1")
+preproc_dir_sgmc = st.session_state['preproc_dir_sgmc']
+preproc_dir_ta1 = st.session_state['preproc_dir_ta1']
 
-preproc_dir = os.path.join(workdir_output, "preproc")
-preproc_dir_sgmc = os.path.join(preproc_dir, "sgmc")
-preproc_dir_ta1 = os.path.join(preproc_dir, "ta1")
+deposit_model_dir = st.session_state['deposit_model_dir']
+boundaries_dir = st.session_state['boundaries_dir']
 
-deposit_model_dir = os.path.join(workdir, "polygon_ranking", "deposit_models")
-boundaries_dir = os.path.join(workdir, 'polygon_ranking', 'boundaries')
-
-output_dir_layers = os.path.join(workdir_output, 'text_embedding_layers')
+output_dir_layers = st.session_state['text_emb_layers']
 
 
 if 'polygons' not in st.session_state:
@@ -150,7 +146,7 @@ with st.expander("Select polygon file"):
     )
 
     if selected_polygon:
-        input_polygons = os.path.join(preproc_dir, selected_polygon)
+        input_polygons = os.path.join(st.session_state['preproc_dir'], selected_polygon)
         if selected_polygon not in st.session_state['polygons']:
             if input_polygons.endswith('.parquet'):
                 data = gpd.read_parquet(input_polygons)
@@ -333,6 +329,22 @@ with tab2:
     cma_label = st.text_input("create a lable for this run")
 
     output_dir = os.path.join(output_dir_layers, cma_label)
+    os.makedirs(output_dir, exist_ok=True)
+
+    def get_parser():
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--processed_input', type=str, default='output_preproc/merged_table_processed.parquet')
+        parser.add_argument('--desc_col', type=str, default="full_desc")
+        parser.add_argument('--hf_model', type=str, default='iaross/cm_bert')
+        parser.add_argument('--deposit_models', type=str, default='deposit_models/deposit_models.json')
+        parser.add_argument('--deposit_type', type=str, nargs='+', default=[])
+        parser.add_argument('--negatives', type=str, default=None)
+        parser.add_argument('--normalize', action='store_true', default=False)
+        parser.add_argument('--boundary', type=nullable_string, default=None)
+        parser.add_argument('--output_dir', type=str, default='output_rank')
+        parser.add_argument('--version', type=str, default='v1.1')
+        parser.add_argument('--cma_no', type=str, default='hack')
+        return parser
 
     def show_cmd():
         if not selected_embedding_model:
@@ -348,9 +360,6 @@ with tab2:
             return 1, msg
         
         rank_cmd = [
-            f"{sys.executable}",
-            f"{os.path.join(workdir, 'polygon_ranking')}/polygon_ranking.py",
-            "rank",
             "--processed_input", input_polygons,
             "--desc_col", desc_col,
             "--deposit_models", selected_dep_model_file,
@@ -378,11 +387,13 @@ with tab2:
         if status == 0:
             st.markdown('\n'.join(msg))
             st.write("starting job ...")
-            process = subprocess.Popen(msg, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-            try:
-                for c in iter(lambda: process.stdout.readline(), b""):
-                    st.info(c.decode("utf-8"))
-            except subprocess.CalledProcessError as e:
-                st.error(process.stderr)
+            # process = subprocess.Popen(msg, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+            # try:
+            #     for c in iter(lambda: process.stdout.readline(), b""):
+            #         st.info(c.decode("utf-8"))
+            # except subprocess.CalledProcessError as e:
+            #     st.error(process.stderr)
+            parser = get_parser()
+            rank(parser.parse_args(msg))
         else:
             st.warning(msg)

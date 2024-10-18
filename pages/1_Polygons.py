@@ -8,30 +8,20 @@ import io
 import geopandas as gpd
 import pandas as pd
 
-st.logo("pages/images/SRI_logo_black.png", size="large")
+st.logo(st.session_state['logo'], size="large")
 
 st.set_page_config(
     page_title="page 1",
     layout="wide"
 )
 
-workdir = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/sri-ta2-mappable-criteria"
-workdir_output = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/output"
 
-download_dir = os.path.join(workdir_output, "download")
-download_dir_sgmc = os.path.join(download_dir, "sgmc")
-download_dir_ta1 = os.path.join(download_dir, "ta1")
-download_dir_user = os.path.join(download_dir, "user")
+download_dir_sgmc = st.session_state["download_dir_sgmc"]
+download_dir_ta1 = st.session_state["download_dir_ta1"]
+download_dir_user = st.session_state["download_dir_user"]
 
-preproc_dir = os.path.join(workdir_output, "preproc")
-preproc_dir_sgmc = os.path.join(preproc_dir, "sgmc")
-preproc_dir_ta1 = os.path.join(preproc_dir, "ta1")
-
-os.makedirs(download_dir_sgmc, exist_ok=True)
-os.makedirs(download_dir_ta1, exist_ok=True)
-os.makedirs(download_dir_user, exist_ok=True)
-os.makedirs(preproc_dir_sgmc, exist_ok=True)
-os.makedirs(preproc_dir_ta1, exist_ok=True)
+preproc_dir_sgmc = st.session_state["preproc_dir_sgmc"]
+preproc_dir_ta1 = st.session_state["preproc_dir_ta1"]
 
 
 def unzip(zip_file, out_dir=None):
@@ -184,7 +174,7 @@ if 'polygons' not in st.session_state:
 
 if selected_polygon:
     if selected_polygon not in st.session_state['polygons']:
-        input_polygons = os.path.join(preproc_dir, selected_polygon)
+        input_polygons = os.path.join(st.session_state['preproc_dir'], selected_polygon)
         if input_polygons.endswith('.parquet'):
             data = gpd.read_parquet(input_polygons)
         else:
@@ -218,8 +208,7 @@ with tab1:
                         if chunk:
                             f.write(chunk)
 
-            dst_dir = os.path.join(preproc_dir_sgmc)
-            p = subprocess.call(['unzip', '-o', shapefile_fullpath, '-d', dst_dir])
+            p = subprocess.call(['unzip', '-o', shapefile_fullpath, '-d', st.session_state['preproc_dir_sgmc']])
             if p == 0:
                 st.info(f"successfully unzipped {shp_fname}")
             else:
@@ -238,8 +227,7 @@ with tab1:
                         if chunk:
                             f.write(chunk)
                 
-            dst_dir = os.path.join(preproc_dir_sgmc)
-            p = subprocess.call(['unzip', '-o', table_fullpath, '-d', dst_dir])
+            p = subprocess.call(['unzip', '-o', table_fullpath, '-d', st.session_state['preproc_dir_sgmc']])
             # unzip(table_fullpath, dst_dir)
             if p == 0:
                 st.info(f"successfully unzipped {tab_fname}")
@@ -247,67 +235,80 @@ with tab1:
                 st.warning(f"failed to unzip {tab_fname}")
                                                                              
 
-
-
-    st.write("### Preprocess SGMC")
-    # if 'USGS_Shapefile' not in st.session_state or st.session_state['USGS_Shapefile'] is None:
-    #     fname = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Shapefiles", "SGMC_Geology.shp")
-    #     st.session_state['USGS_Shapefile'] = gpd.read_file(fname)
+    if len(downloaded_files) == 0:
+        st.warning("please hit the 'download' button to download SGMC dataset first")
     
-    # if 'USGS_Table' not in st.session_state or st.session_state['USGS_Table'] is None:
-    #     fname = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Tables_CSV", "SGMC_Units.csv")
-    #     st.session_state['USGS_Table'] = pd.read_csv(fname)
+    else:
 
-    # data1_sample = st.session_state['USGS_Shapefile'].sample(n=20)
-    # data2_sample = st.session_state['USGS_Table'].sample(n=20)
+        st.write("### Preprocess SGMC")
+        # if 'USGS_Shapefile' not in st.session_state or st.session_state['USGS_Shapefile'] is None:
+        #     fname = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Shapefiles", "SGMC_Geology.shp")
+        #     st.session_state['USGS_Shapefile'] = gpd.read_file(fname)
+        
+        # if 'USGS_Table' not in st.session_state or st.session_state['USGS_Table'] is None:
+        #     fname = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Tables_CSV", "SGMC_Units.csv")
+        #     st.session_state['USGS_Table'] = pd.read_csv(fname)
 
-    with st.expander("USGS_SGMC_Shapefiles (sample)"):
-        st.dataframe(st.session_state['USGS_Shapefile_tmp'])
+        # data1_sample = st.session_state['USGS_Shapefile'].sample(n=20)
+        # data2_sample = st.session_state['USGS_Table'].sample(n=20)
 
-    with st.expander("USGS_SGMC_Tables_CSV (sample)"):
-        st.dataframe(st.session_state['USGS_Table_tmp'])
+        with st.expander("USGS_SGMC_Shapefiles (sample)"):
+            if os.path.exists(st.session_state['USGS_Shapefile_fname']):
+                tmp_shp = gpd.read_file(st.session_state['USGS_Shapefile_fname'], rows=10)
+                st.dataframe(tmp_shp)
+            else:
+                tmp_shp = None
 
-    with st.expander("Merging configs"):
-        col1 = list(st.session_state['USGS_Shapefile_tmp'])
-        col2 = list(st.session_state['USGS_Table_tmp'])
-        all_cols = list(set(col1+col2))
-        shared_cols = list(set(col1).intersection(set(col2)))
-        other_cols = list(set(all_cols).difference(set(shared_cols)))
+        with st.expander("USGS_SGMC_Tables_CSV (sample)"):
+            if os.path.exists(st.session_state['USGS_Table_fname']):
+                tmp_csv = pd.read_csv(st.session_state['USGS_Table_fname'], nrows=10)
+                st.dataframe(tmp_csv)
+            else:
+                tmp_csv = None
 
-        key_cols = st.multiselect(
-            "join two tables on these attributes:",
-            shared_cols,
-            ['STATE', 'ORIG_LABEL', 'SGMC_LABEL', 'UNIT_LINK', 'UNIT_NAME'],
+        with st.expander("Merging configs"):
+            if tmp_shp is not None and tmp_csv is not None:
+                col1 = list(tmp_shp.columns)
+                col2 = list(tmp_csv.columns)
+                all_cols = list(set(col1+col2))
+                shared_cols = list(set(col1).intersection(set(col2)))
+                other_cols = list(set(all_cols).difference(set(shared_cols)))
+
+                key_cols = st.multiselect(
+                    "join two tables on these attributes:",
+                    shared_cols,
+                    ['STATE', 'ORIG_LABEL', 'SGMC_LABEL', 'UNIT_LINK', 'UNIT_NAME'],
+                )
+
+                cols = st.multiselect(
+                    "concatenate columns into a long description:",
+                    all_cols,
+                    ['UNIT_NAME', 'MAJOR1', 'MAJOR2', 'MAJOR3', 'MINOR1', 'MINOR2', 'MINOR3', 'MINOR4', 'MINOR5', 'GENERALIZE', 'UNITDESC']
+                )
+                desc_col = st.text_input(
+                    "long description column name:",
+                    "full_desc"
+                )
+
+        out_fname = st.text_input(
+            "Output file:",
+            "SGMC_preproc.tmp.gpkg"
         )
+        out_fname_ = os.path.join(preproc_dir_sgmc, out_fname)
 
-        cols = st.multiselect(
-            "concatenate columns into a long description:",
-            all_cols,
-            ['UNIT_NAME', 'MAJOR1', 'MAJOR2', 'MAJOR3', 'MINOR1', 'MINOR2', 'MINOR3', 'MINOR4', 'MINOR5', 'GENERALIZE', 'UNITDESC']
-        )
-        desc_col = st.text_input(
-            "long description column name:",
-            "full_desc"
-        )
-    out_fname = st.text_input(
-        "Output file:",
-        "SGMC_preproc.tmp.gpkg"
-    )
-    out_fname_ = os.path.join(preproc_dir_sgmc, out_fname)
-
-    merge = st.button("Merge")
-    if merge:
-        data = gdf_merge_concat(
-            gpd.read_file(st.session_state['USGS_Shapefile_fname']),
-            pd.read_csv(st.session_state['USGS_Table_fname']), 
-            key_cols, cols, desc_col)
-        data.to_file(out_fname_, driver="GPKG")
-    
-    if os.path.exists(out_fname_):
-        data = gpd.read_file(out_fname_)
-        data_sample = data.sample(n=20)
-        st.write(f"Output (sample):")
-        st.dataframe(data_sample)
+        merge = st.button("Merge")
+        if merge:
+            data = gdf_merge_concat(
+                gpd.read_file(st.session_state['USGS_Shapefile_fname']),
+                pd.read_csv(st.session_state['USGS_Table_fname']), 
+                key_cols, cols, desc_col)
+            data.to_file(out_fname_, driver="GPKG")
+        
+        if os.path.exists(out_fname_):
+            data = gpd.read_file(out_fname_)
+            data_sample = data.sample(n=20)
+            st.write(f"Output (sample):")
+            st.dataframe(data_sample)
 
 
 with tab2:

@@ -3,12 +3,10 @@ import pandas as pd
 import os
 import json
 
-workdir = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/sri-ta2-mappable-criteria"
-workdir_output = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/output"
 
-deposit_model_dir = os.path.join(workdir, "polygon_ranking", "deposit_models")
+deposit_model_dir = st.session_state['deposit_model_dir']
 
-st.logo("pages/images/SRI_logo_black.png", size="large")
+st.logo(st.session_state['logo'], size="large")
 
 st.set_page_config(
     page_title="page2",
