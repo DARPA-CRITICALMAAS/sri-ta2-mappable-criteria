@@ -27,5 +27,5 @@ RUN git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.gi
 RUN pip3 install -r /workdir/sri-ta2-mappable-criteria/polygon_ranking/requirements.txt
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
-WORKDIR /workdir/sri-ta2sri-ta2-mappable-criteria
+WORKDIR /workdir/sri-ta2-mappable-criteria
 ENTRYPOINT ["streamlit", "run", "Welcome.py", "--server.port=8501", "--server.address=0.0.0.0"]
