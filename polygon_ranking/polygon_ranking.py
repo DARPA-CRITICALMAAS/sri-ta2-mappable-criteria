@@ -536,8 +536,9 @@ if len(sys.argv) >= 2:
     if not '--ignore-gooey' in sys.argv:
         sys.argv.append('--ignore-gooey')
 
-@Gooey
-def main():
+# @Gooey
+
+def get_parser():
     parser = argparse.ArgumentParser()
     parsers = parser.add_subparsers(dest='task')
 
@@ -559,7 +560,11 @@ def main():
     rank_parser.add_argument('--output_dir', type=str, default='output_rank')
     rank_parser.add_argument('--version', type=str, default='v1.1')
     rank_parser.add_argument('--cma_no', type=str, default='hack')
+    return parser
 
+
+def main():
+    parser = get_parser()
     args = parser.parse_args()
 
     if args.task == 'preproc':
