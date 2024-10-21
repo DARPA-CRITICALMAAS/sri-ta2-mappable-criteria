@@ -56,8 +56,9 @@ m = leafmap.Map(
     )
 
 for i, l in enumerate(layers):
-    m.add_raster(os.path.join(cma_raster_dir, l+'.tif'), colormap=color_maps[i%len(color_maps)], layer_name=l)
-    
+    # m.add_raster(os.path.join(cma_raster_dir, l+'.tif'), colormap=color_maps[i%len(color_maps)], layer_name=l)
+    m.add_raster(os.path.join(cma_raster_dir, l+'.tif'), colormap='plasma', layer_name=l)
+
 m.to_streamlit(height=800)
 
 to_view = None
