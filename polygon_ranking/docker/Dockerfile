@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     curl \
+    unzip \
     tini \
     libenchant-2-dev \
     libgtk-3-dev
