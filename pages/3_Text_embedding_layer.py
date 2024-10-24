@@ -222,7 +222,7 @@ with tab1:
             with st.expander(cus_q):
                 col_a, _, col_b, col_c, col_d = st.columns([0.4, 0.14, 0.16, 0.15, 0.15])
                 with col_a:
-                    threshold = st.slider(cus_q, 0.5, 1.0, 0.75, label_visibility='collapsed')
+                    threshold = st.slider(cus_q, 0.8, 1.0, 0.9, label_visibility='collapsed')
                     temp_data = st.session_state['temp_gpd_data'][cus_q]
                     gpd_data_filtered = temp_data['data'][temp_data['data']['cus_query']>=threshold]
                 with col_b:
