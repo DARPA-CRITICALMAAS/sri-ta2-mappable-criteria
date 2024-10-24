@@ -112,7 +112,7 @@ def cdr_download_job(job_id, download_dir, cdr_key):
                 f.write(chunk)
 
 
-def gdf_merge_concat(data1, data2, key_cols, cols, desc_col):
+def gdf_merge_concat(data1, data2, key_cols, cols, desc_col, dissolve=False):
     assert 'geometry' in data1.keys()
     col1 = [c for c in data1.columns.tolist() if c in cols]
     col2 = [c for c in data2.columns.tolist() if c in cols]
@@ -121,7 +121,8 @@ def gdf_merge_concat(data1, data2, key_cols, cols, desc_col):
     ind_invalid = ~data1_sub['geometry'].is_valid
     data1_sub.loc[ind_invalid, 'geometry'] = data1_sub.loc[ind_invalid, 'geometry'].buffer(0)
 
-    # data1_dis = data1_sub.dissolve(by=key_cols, aggfunc='first')
+    if dissolve:
+        data1_sub = data1_sub.dissolve(by=key_cols, aggfunc='first')
 
     data2_sub = data2[list(set(key_cols + col2))]
     # sgmc_units_subset.groupby(key_cols).size()
@@ -290,6 +291,8 @@ with tab1:
                     "full_desc"
                 )
 
+                dissolve = st.checkbox("dissolve", True)
+
         out_fname = st.text_input(
             "Output file:",
             "SGMC_preproc.tmp.gpkg"
@@ -301,7 +304,7 @@ with tab1:
             data = gdf_merge_concat(
                 gpd.read_file(st.session_state['USGS_Shapefile_fname']),
                 pd.read_csv(st.session_state['USGS_Table_fname']), 
-                key_cols, cols, desc_col)
+                key_cols, cols, desc_col, dissolve)
             data.to_file(out_fname_, driver="GPKG")
         
         if os.path.exists(out_fname_):
