@@ -18,6 +18,10 @@ from sentence_transformers import SentenceTransformer
 from branca.colormap import linear
 
 
+if not st.session_state.get("password_correct", False):
+    st.stop()
+
+
 def random_letters(length):
     return ''.join(random.sample(string.ascii_lowercase,length))
 

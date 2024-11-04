@@ -8,6 +8,10 @@ import io
 import geopandas as gpd
 import pandas as pd
 
+
+if not st.session_state.get("password_correct", False):
+    st.stop()
+
 st.logo(st.session_state['logo'], size="large")
 
 st.set_page_config(

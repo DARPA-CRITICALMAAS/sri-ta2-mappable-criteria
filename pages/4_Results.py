@@ -12,6 +12,10 @@ import subprocess
 from polygon_ranking.cdr_push import push_to_cdr
 
 
+if not st.session_state.get("password_correct", False):
+    st.stop()
+
+
 st.logo(st.session_state['logo'], size="large")
 
 st.set_page_config(

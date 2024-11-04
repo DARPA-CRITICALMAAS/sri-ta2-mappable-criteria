@@ -4,6 +4,9 @@ import os
 import json
 
 
+if not st.session_state.get("password_correct", False):
+    st.stop()
+
 deposit_model_dir = st.session_state['deposit_model_dir']
 
 st.logo(st.session_state['logo'], size="large")
