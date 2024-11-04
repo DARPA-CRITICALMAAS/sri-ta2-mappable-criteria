@@ -196,6 +196,7 @@ with tab1:
         zoom=4,
         max_zoom=20,
         min_zoom=2,
+        height=800
     )
 
     clicked = st.button("Search")
