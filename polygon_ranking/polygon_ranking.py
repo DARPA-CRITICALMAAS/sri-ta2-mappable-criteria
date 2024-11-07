@@ -176,8 +176,13 @@ def float_to_color(array):
     return ((array-array.min()) * (1/(array.max()-array.min()+1e-12)*255)).astype('uint8')
 
 
-def rank_polygon_single_query(query, embed_model, data, desc_col=None, polygon_vec=None, norm=True, negative_query=None):
+def rank_polygon_single_query(query, embed_model, data_original, desc_col=None, polygon_vec=None, norm=True, negative_query=None):
+    data = data_original.copy()
+    if 'embeddings' in data.columns and polygon_vec is None:
+        polygon_vec = np.array(data['embeddings'].to_list())
+
     assert not (desc_col is None and polygon_vec is None)
+
     if polygon_vec is None:
         polygon_vec = convert_text_to_vector_hf(data[desc_col].to_list(), embed_model)
 
@@ -227,7 +232,7 @@ def rank_polygon(descriptive_model, embed_model, data_, args):
 
     query_vec = {}
     cos_sim = {}
-    prefix = 'bge_'
+    prefix = 'emb_'
     for key in descriptive_model:
         query_vec[key] = convert_text_to_vector_hf([descriptive_model[key]],  embed_model)
         cos_sim[prefix+key] = cosine_similarity(query_vec[key], polygon_vectors)[0]
@@ -236,19 +241,20 @@ def rank_polygon(descriptive_model, embed_model, data_, args):
         if args.negatives is not None:
             cos_sim[prefix+key] = 0.5 * cos_sim[prefix+key] + 0.5* (1 - cos_sim_neg)
 
-    try: 
-        cos_sim_age_min = cosine_similarity(query_vec['age_range'], polygon_vectors_age_min)[0]
-        cos_sim_age_max = cosine_similarity(query_vec['age_range'], polygon_vectors_age_max)[0]
-        cos_sim['age_range'] = 0.5*(cos_sim_age_min + cos_sim_age_max)
-    except Exception as e:
-        print("Failed to compute age range score. Skipping ...")
-        pass
+    # try: 
+    #     cos_sim_age_min = cosine_similarity(query_vec['age_range'], polygon_vectors_age_min)[0]
+    #     cos_sim_age_max = cosine_similarity(query_vec['age_range'], polygon_vectors_age_max)[0]
+    #     cos_sim['age_range'] = 0.5*(cos_sim_age_min + cos_sim_age_max)
+    # except Exception as e:
+    #     print("Failed to compute age range score. Skipping ...")
+    #     pass
 
-    bge_all = 0
-    for key in cos_sim:
-        bge_all += cos_sim[key]
-    bge_all /= len(cos_sim)
-    cos_sim[prefix+'all'] = bge_all
+    if args.compute_average:
+        avg_score = 0
+        for key in cos_sim:
+            avg_score += cos_sim[key]
+        avg_score /= len(cos_sim)
+        cos_sim[prefix+'average'] = avg_score
 
     for key in cos_sim:
         data_[key] = pd.Series(list(cos_sim[key]))
@@ -469,12 +475,18 @@ def rank(args):
 
     with open(args.deposit_models, 'r') as f:
         systems_dict = json.load(f)
+
     if len(args.deposit_type) == 0:
         args.deposit_type = list(systems_dict.keys())
 
     for deposit_type in args.deposit_type:
 
-        gpd_data, cos_sim = rank_polygon(systems_dict[deposit_type], embed_model, data_, args)
+        if len(args.characteristics) == 0:
+            tmp_dep_model = systems_dict[deposit_type]
+        else:
+            tmp_dep_model = {key: systems_dict[deposit_type][key] for key in args.characteristics}
+            
+        gpd_data, cos_sim = rank_polygon(tmp_dep_model, embed_model, data_, args)
         # gpd_data = gpd_data.to_crs('EPSG:3857')  # better for rendering in *GIS
         gpd_data = gpd_data.to_crs('ESRI:102008')
 
