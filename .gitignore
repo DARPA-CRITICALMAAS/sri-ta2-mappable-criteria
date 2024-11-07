@@ -2,3 +2,4 @@
 **/__pycache__/
 .streamlit/secrets.toml
 polygon_ranking/TA1
+polygon_ranking/notebooks/*.gpkg
