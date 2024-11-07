@@ -97,12 +97,23 @@ if 'embed_model' not in st.session_state:
     st.session_state['embed_model'] = None
     st.session_state['embed_polygon'] = None
 
-st.session_state['logo'] = os.path.join(st.session_state['workdir'], 'pages/images/SRI_logo_black.png')
+st.session_state['logo'] = os.path.join(st.session_state['workdir'], './images/SRI_logo_black.png')
 st.logo(st.session_state['logo'], size="large")
 
+
+
+# st.write("# Welcome message")
+
+pg = st.navigation([
+        st.Page("st_page_embs.py"),
+        st.Page("st_page_polygons.py"),
+        st.Page("st_page_dep_models.py"),
+    ]
+    , position="hidden"
+)
 st.set_page_config(
-    page_title="Hello",
-    layout="wide"
+    page_title="Map synthesis",
+    layout="wide",
 )
 
-st.write("# Welcome message")
+pg.run()
