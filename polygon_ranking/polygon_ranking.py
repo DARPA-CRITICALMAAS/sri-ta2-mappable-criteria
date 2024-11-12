@@ -178,8 +178,6 @@ def float_to_color(array):
 
 def rank_polygon_single_query(query, embed_model, data_original, desc_col=None, polygon_vec=None, norm=True, negative_query=None):
     data = data_original.copy()
-    if 'embeddings' in data.columns and polygon_vec is None:
-        polygon_vec = np.array(data['embeddings'].to_list())
 
     assert not (desc_col is None and polygon_vec is None)
 
@@ -443,19 +441,19 @@ def rasterize_column_(gdf, layer, cut_line, out_tif, target_crs='ESRI:102008', p
 
 
 
-def make_metadata(layer, height, width, version, deposit_type, cma_no):
+def make_metadata(layer, deposit_type, desc, cma_no, sysver="v1.1", height=500, width=500):
     metadata = {
         "DOI": "none",
-        "authors": [f"sri-ta2-EviSynth-{version}"],
+        "authors": [desc],
         "publication_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "category": "geology",
-        "subcategory": f"SRI text embedding layers - {version}",
-        "description": f"{cma_no}-{layer}",
+        "subcategory": f"SRI text embedding layers - {sysver}",
+        "description": f"{cma_no}-{deposit_type}-{layer}",
         "derivative_ops": "none",
         "type": "continuous",
         "resolution": [str(height), str(width)],
         "format": "tif",
-        "evidence_layer_raster_prefix": f"sri-EviSynth-{version}_{cma_no}_{deposit_type}_{layer}",
+        "evidence_layer_raster_prefix": f"sri-txtemb-{sysver}_{cma_no}_{deposit_type}_{layer}",
         "download_url": "none",
     }
     return metadata
