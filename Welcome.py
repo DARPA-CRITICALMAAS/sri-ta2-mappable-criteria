@@ -102,7 +102,11 @@ st.logo(st.session_state['logo'], size="large")
 
 
 
-# st.write("# Welcome message")
+# # st.write("# Welcome message")
+# st.session_state['emb.shapefile'] = None
+# st.session_state['emb.area'] = None
+# st.session_state['emb.desc_col'] = None
+# st.session_state['emb.model'] = None
 
 pg = st.navigation([
         st.Page("st_page_embs.py"),
