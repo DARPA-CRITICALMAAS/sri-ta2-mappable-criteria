@@ -35,11 +35,11 @@ if not check_password():
 
 mkdirs = []
 
-workdir = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/sri-ta2-mappable-criteria"
-workdir_output = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/output"
+# workdir = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/sri-ta2-mappable-criteria"
+# workdir_output = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/output"
 
-# workdir = "./"
-# workdir_output = "/workdir-data"
+workdir = "./"
+workdir_output = "/workdir-data"
 
 mkdirs.extend([workdir, workdir_output])
 st.session_state['workdir'] = workdir
