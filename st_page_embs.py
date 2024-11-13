@@ -294,8 +294,8 @@ def push_layers_to_cdr(all_layers, names, descriptions):
             with st.container(height=400):
                 for layer, col_name, desc in zip(all_layers, names, descriptions):
                     metadata = make_metadata(col_name, "shp", selected_dep_type, desc, "15month_test", sysver="v1.1")
-                    with open(f'{col_name}.json', 'w') as f:
-                        json.dump(metadata, f)
+                    # with open(f'{col_name}.json', 'w') as f:
+                    #     json.dump(metadata, f)
                     layer_temp = layer.rename(columns={col_name: 'query_sim'})  # Ten-character limitation to Shapefile attributes
                     content = get_zip_shp(layer_temp, col_name)
                     response = push_to_cdr(cdr_key, metadata, filepath=col_name+".zip", content=content)
