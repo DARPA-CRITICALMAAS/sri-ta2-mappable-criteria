@@ -71,7 +71,7 @@ def load_shape_file(filename):
 def load_hf_model(model_name="iaross/cm_bert"):
     return SentenceTransformer(model_name, trust_remote_code=True)
 
-@st.cache_data
+@st.cache_data(persist="disk")
 def shape_file_overlay(selected_polygon, boundary_file):
     data = load_shape_file(selected_polygon)
     if boundary_file == 'full':
@@ -81,7 +81,7 @@ def shape_file_overlay(selected_polygon, boundary_file):
     data = data.overlay(area, how="intersection")[cols]
     return data
 
-@st.cache_data
+@st.cache_data(persist="disk")
 def compute_vec(selected_polygon, boundary_file, desc_col, model_name):
     data = shape_file_overlay(selected_polygon, boundary_file)
     data = data[~data[desc_col].isna()]
