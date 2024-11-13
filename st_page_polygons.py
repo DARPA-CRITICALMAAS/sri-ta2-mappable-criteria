@@ -197,7 +197,7 @@ with tab1:
 
     with col2:
         st.write("### Download SGMC")
-        download_sgmc = st.button("Download")
+        download_sgmc = st.button("Download", icon=":material/download:")
         if download_sgmc:
             shp_fname = "USGS_SGMC_Shapefiles.zip"
             shapefile_fullpath = os.path.join(download_dir_sgmc, shp_fname)
@@ -298,7 +298,7 @@ with tab1:
         )
         out_fname_ = os.path.join(preproc_dir_sgmc, out_fname)
 
-        merge = st.button("Merge")
+        merge = st.button("Merge", icon=":material/join:")
         if merge:
             data = gdf_merge_concat(
                 gpd.read_file(st.session_state['USGS_Shapefile_fname']),
