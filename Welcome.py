@@ -39,7 +39,7 @@ mkdirs = []
 # workdir_output = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/output"
 
 workdir = "./"
-workdir_output = "/workdir-data"
+workdir_output = "../workdir-data"
 
 mkdirs.extend([workdir, workdir_output])
 st.session_state['workdir'] = workdir
@@ -99,6 +99,9 @@ if 'embed_model' not in st.session_state:
 
 st.session_state['logo'] = os.path.join(st.session_state['workdir'], './images/SRI_logo_black.png')
 st.logo(st.session_state['logo'], size="large")
+
+st.session_state['threshold_min'] = 0.8
+st.session_state['threshold_default']=0.9
 
 
 

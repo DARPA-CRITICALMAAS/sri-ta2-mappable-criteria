@@ -13,6 +13,8 @@ import sys
 import subprocess
 import tempfile
 from datetime import datetime
+import folium
+from streamlit_folium import st_folium
 import leafmap.foliumap as leafmap
 from polygon_ranking.cdr_push import push_to_cdr, raster_and_push
 from polygon_ranking.polygon_ranking import convert_text_to_vector_hf, rank_polygon_single_query, rank, nullable_string
@@ -113,6 +115,15 @@ def generate_style_func(cmap, line_color, weight, attribute):
                 'fillOpacity': 0.8,
             }
     return style_func
+
+
+def generate_slider_on_change(slider_key, layer_name):
+    def slider_on_change():
+        threshold = st.session_state[slider_key]
+        for item in st.session_state['temp_gpd_data']:
+            if item['name'] == layer_name:
+                item['data_filtered'] = item['data'][item['data'][layer_name] >= threshold]
+    return slider_on_change
 
 
 def create_zip(selected_data, file_name):
@@ -236,14 +247,19 @@ def add_temp_layer(gpd_layer, query_dict):
         while desc_col_new in existing_layers:
             desc_col_new = desc_col + f"_{i}"
             i+=1
-        
-        gpd_layer.rename(columns={desc_col: desc_col_new}, inplace=True)
+        cols_to_del = list(query_dict.keys())
+        cols_to_del.remove(desc_col)
+        layer_temp = gpd_layer.copy()
 
+        layer_temp.rename(columns={desc_col: desc_col_new}, inplace=True)
+        layer_temp.drop(columns=cols_to_del, inplace=True)
+        layer_temp = layer_temp[layer_temp[desc_col_new] > st.session_state['threshold_min']]
         cmap = st.session_state['colormap'].next()
         st.session_state['temp_gpd_data'].append({
             'name': desc_col_new,
             'desc': desc,
-            'data': gpd_layer,
+            'data': layer_temp,
+            'data_filtered': layer_temp[layer_temp[desc_col_new] > st.session_state['threshold_default']],
             'style': generate_style_func(cmap, '', 0, desc_col_new),
             'highlight': generate_style_func(cmap, 'black', 1, desc_col_new)
         })
@@ -266,13 +282,21 @@ def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", heigh
     return metadata
 
 @st.dialog(title="Download", width="small")
-def download_layers(layers, names):
+def download_layers():
     # zip_buffer = get_zip_geoj(layers, names)
-    layers_temp = []
-    for layer, name in zip(layers, names):
-        layers_temp.append(layer.copy().rename(columns={name: 'query_sim'}))
+    layers = []
+    names=[]
+    descriptions=[]
+    for item in st.session_state['temp_gpd_data']:
+        name = item['name']
+        desc = item['desc']
+        data = item['data_filtered'].rename(columns={name: 'query_sim'})
 
-    zip_buffer = get_zip_shp_multiple(layers_temp, names, descriptions)
+        names.append(name)
+        descriptions.append(desc)
+        layers.append(data)
+
+    zip_buffer = get_zip_shp_multiple(layers, names, descriptions)
     st.write("Click the button below to download:")
     st.download_button(
         label="",
@@ -284,7 +308,7 @@ def download_layers(layers, names):
 
 
 @st.dialog(title="Push to CDR", width="small")
-def push_layers_to_cdr(all_layers, names, descriptions):
+def push_layers_to_cdr():
     cdr_key = st.text_input("Your CDR key:", type="password")
     st.write("Click the button below to push:")
     if st.button("", key="emb.push_to_cdr", icon=":material/cloud_upload:"):
@@ -292,12 +316,15 @@ def push_layers_to_cdr(all_layers, names, descriptions):
             st.error("CDR key is empty.")
         else:
             with st.container(height=400):
-                for layer, col_name, desc in zip(all_layers, names, descriptions):
+                for item in st.session_state['temp_gpd_data']:
+                    col_name = item['name']
+                    desc = item['desc']
+                    layer = item['data_filtered'].rename(columns={col_name: 'query_sim'}) # Ten-character limitation to Shapefile attributes
+
                     metadata = make_metadata(col_name, "shp", selected_dep_type, desc, "15month_test", sysver="v1.1")
                     # with open(f'{col_name}.json', 'w') as f:
-                    #     json.dump(metadata, f)
-                    layer_temp = layer.rename(columns={col_name: 'query_sim'})  # Ten-character limitation to Shapefile attributes
-                    content = get_zip_shp(layer_temp, col_name)
+                    #     json.dump(metadata, f)  
+                    content = get_zip_shp(layer, col_name)
                     response = push_to_cdr(cdr_key, metadata, filepath=col_name+".zip", content=content)
                     print(response.status_code, response.content)
                     st.info(str(response.status_code) + ' ' + str(response.content))
@@ -409,13 +436,23 @@ with st.expander("Shape file"):
 
 
 
-m = leafmap.Map(
-    center=(38, -100),
-    tiles='Cartodb Positron',
-    zoom=4,
-    max_zoom=20,
+# m = leafmap.Map(
+#     center=(38, -100),
+#     tiles='Cartodb Positron',
+#     zoom=4,
+#     max_zoom=20,
+#     min_zoom=2,
+#     height=800
+# )
+
+m = folium.Map(
+    location=(38, -100),
+    zoom_start=4,
     min_zoom=2,
-    height=800
+    max_zoom=20,
+    tiles='Cartodb Positron',
+    height='100%',
+    width='100%'
 )
 
 with st.expander("Generate new layers"):
@@ -613,9 +650,6 @@ with st.expander("Generate new layers"):
     
 
 if 'temp_gpd_data' in st.session_state and len(st.session_state['temp_gpd_data']) > 0:
-    all_layers = []
-    names = []
-    descriptions = []
     with st.container(border=True, height=300):
         st.write("*Layers*")
         for i, item in enumerate(st.session_state['temp_gpd_data']):
@@ -627,27 +661,30 @@ if 'temp_gpd_data' in st.session_state and len(st.session_state['temp_gpd_data']
                     st.write("_Description_:", item['desc'])
             
             with col2:
-                threshold = st.slider(item['name'], 0.8, 1.0, 0.9, label_visibility='collapsed')
-                gpd_data_filtered = item['data'][item['data'][item['name']]>=threshold]
-                # st.dataframe(gpd_data_filtered, height=200)
+                slider_key = f"emb.slider.{item['name']}"
+                st.slider(
+                    item['name'],
+                    min_value = st.session_state['threshold_min'],
+                    max_value = 1.0,
+                    value = st.session_state['threshold_default'],
+                    key=slider_key,
+                    on_change=generate_slider_on_change(slider_key, item['name']),
+                    label_visibility='collapsed'
+                )
 
             with col3:
                 if st.button("remove", icon=":material/delete:", key=f"emb.layer{i}.rm"):
                     del st.session_state['temp_gpd_data'][i]
                     st.rerun()
 
-            all_layers.append(gpd_data_filtered)
-            names.append(item['name'])
-            descriptions.append(item['desc'])
-
-            m.add_gdf(
-                gpd_data_filtered,
-                layer_name=item['name'],
-                smooth_factor=1,
-                style_function=item['style'],
-                highlight_function=item['highlight'],
-                # info_mode="on_click",
-            )
+            # m.add_gdf(
+            #     gpd_data_filtered,
+            #     layer_name=item['name'],
+            #     smooth_factor=1,
+            #     style_function=item['style'],
+            #     highlight_function=item['highlight'],
+            #     # info_mode="on_click",
+            # )
         
         # with st.expander("Push to CDR"):
         #     to_view = None
@@ -687,7 +724,22 @@ if 'temp_gpd_data' in st.session_state and len(st.session_state['temp_gpd_data']
         #                     response = push_to_cdr(cdr_key, metadata, tif_fname)
         #                     st.info(response)
 
-m.to_streamlit()
+# m.to_streamlit()
+fgroups = []
+for item in st.session_state['temp_gpd_data']:
+    fg = folium.FeatureGroup(name=item['name'])
+    fg.add_child(
+        folium.GeoJson(data=item['data_filtered'], style_function=item['style'], highlight_function=item['highlight'])
+    )
+    fgroups.append(fg)
+
+st_folium(
+    m,
+    height=800,
+    returned_objects=[],
+    feature_group_to_add=fgroups,
+    layer_control=folium.LayerControl(collapsed=False),
+)
 
 
 
@@ -696,10 +748,10 @@ if st.button("Download", icon=":material/download:"):
     if len(st.session_state['temp_gpd_data']) == 0:
         st.error("There are no text embedding layers generated yet.")
     else:
-        download_layers(all_layers, names)
+        download_layers()
 
 if st.button("Push to CDR", icon=":material/cloud_upload:"):
     if len(st.session_state['temp_gpd_data']) == 0:
         st.error("There are no text embedding layers generated yet.")
     else:
-        push_layers_to_cdr(all_layers, names, descriptions)
+        push_layers_to_cdr()
