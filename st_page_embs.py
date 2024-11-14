@@ -736,6 +736,7 @@ for item in st.session_state['temp_gpd_data']:
 st_folium(
     m,
     height=800,
+    use_container_width=True,
     returned_objects=[],
     feature_group_to_add=fgroups,
     layer_control=folium.LayerControl(collapsed=False),
