@@ -395,7 +395,6 @@ with st.expander("Shape file"):
                 boundary_file = 'full'
             else:
                 selected_boundary_file = os.path.join(boundaries_dir, boundary_file)
-                data = shape_file_overlay(selected_polygon, selected_boundary_file)
 
         with col_b:
             columns = list(load_shape_file(selected_polygon).columns)
@@ -445,16 +444,6 @@ with st.expander("Shape file"):
 #     height=800
 # )
 
-m = folium.Map(
-    location=(38, -100),
-    zoom_start=4,
-    min_zoom=2,
-    max_zoom=20,
-    tiles='Cartodb Positron',
-    height='100%',
-    width='100%'
-)
-
 with st.expander("Generate new layers"):
     tab1, tab2 = st.tabs(["Custom query", "Deposit model"])
 
@@ -482,7 +471,7 @@ with st.expander("Generate new layers"):
                 st.error("Please type in a short name for the query.")
             else:
                 temp_query = {query_name: query}
-                gpd_data = query_polygons(selected_polygon, boundary_file, desc_col, model_name, query=temp_query)
+                gpd_data = query_polygons(selected_polygon, selected_boundary_file, desc_col, model_name, query=temp_query)
                 
                 add_temp_layer(gpd_data, query_dict = temp_query)
 
@@ -644,7 +633,7 @@ with st.expander("Generate new layers"):
                 st.error("No characteristics in the deposit model have been selected.")
             else:
                 temp_dep_model = {k: dep_model[k] for k in selected_characteristics}
-                gpd_data = query_polygons(selected_polygon, boundary_file, desc_col, model_name, query=temp_dep_model)
+                gpd_data = query_polygons(selected_polygon, selected_boundary_file, desc_col, model_name, query=temp_dep_model)
                 
                 add_temp_layer(gpd_data, query_dict=temp_dep_model)    
     
@@ -725,25 +714,42 @@ if 'temp_gpd_data' in st.session_state and len(st.session_state['temp_gpd_data']
         #                     st.info(response)
 
 # m.to_streamlit()
+
+m = folium.Map(
+    location=(38, -100),
+    zoom_start=4,
+    min_zoom=2,
+    max_zoom=20,
+    tiles='Cartodb Positron',
+)
 fgroups = []
 for item in st.session_state['temp_gpd_data']:
     fg = folium.FeatureGroup(name=item['name'])
+    tooltip = folium.GeoJsonTooltip(
+        fields=["full_desc", item['name']],
+        aliases=["description", f"query_sim({item['name']})"],
+        localize=True,
+        sticky=False,
+        labels=True,
+        max_width=100,
+    )
     fg.add_child(
-        folium.GeoJson(data=item['data_filtered'], style_function=item['style'], highlight_function=item['highlight'])
+        folium.GeoJson(
+            data=item['data_filtered'],
+            style_function=item['style'],
+            highlight_function=item['highlight'],
+            tooltip=tooltip,
+        )
     )
     fgroups.append(fg)
 
 st_folium(
     m,
-    height=800,
     use_container_width=True,
     returned_objects=[],
     feature_group_to_add=fgroups,
     layer_control=folium.LayerControl(collapsed=False),
 )
-
-
-
 
 if st.button("Download", icon=":material/download:"):
     if len(st.session_state['temp_gpd_data']) == 0:
