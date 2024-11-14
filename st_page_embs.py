@@ -392,7 +392,7 @@ with st.expander("Shape file"):
                 key='emb.area'
             )
             if not boundary_file:
-                boundary_file = 'full'
+                selected_boundary_file = 'full'
             else:
                 selected_boundary_file = os.path.join(boundaries_dir, boundary_file)
 
