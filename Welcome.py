@@ -97,8 +97,9 @@ if 'embed_model' not in st.session_state:
     st.session_state['embed_model'] = None
     st.session_state['embed_polygon'] = None
 
-st.session_state['logo'] = os.path.join(st.session_state['workdir'], './images/SRI_logo_black.png')
-st.logo(st.session_state['logo'], size="large")
+st.session_state['logo'] = os.path.join(st.session_state['workdir'], './images/logo.png')
+st.session_state['Q_icon'] = os.path.join(st.session_state['workdir'], './images/Q_icon.svg')
+# st.logo(st.session_state['logo'], size="large")
 
 st.session_state['threshold_min'] = 0.8
 st.session_state['threshold_default']=0.9
@@ -119,7 +120,8 @@ pg = st.navigation([
     , position="hidden"
 )
 st.set_page_config(
-    page_title="Map synthesis",
+    page_title="QueryPlot",
+    page_icon=st.session_state["Q_icon"],
     layout="wide",
 )
 
