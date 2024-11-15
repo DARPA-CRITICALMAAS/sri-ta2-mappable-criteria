@@ -50,6 +50,9 @@ if 'temp_gpd_data' not in st.session_state:
 if 'colormap' not in st.session_state:
     st.session_state['colormap'] = Cmap()
 
+if 'layer_id' not in st.session_state:
+    st.session_state['layer_id'] = 0
+
 def random_letters(length):
     return ''.join(random.sample(string.ascii_lowercase,length))
 
@@ -271,6 +274,7 @@ def add_temp_layer(gpd_layer, query_dict):
         layer_temp = layer_temp[layer_temp[desc_col_new] > st.session_state['threshold_min']]
         cmap = st.session_state['colormap'].next()
         st.session_state['temp_gpd_data'].append({
+            'id': st.session_state['layer_id'],
             'name': desc_col_new,
             'desc': desc,
             'data': layer_temp,
@@ -278,6 +282,7 @@ def add_temp_layer(gpd_layer, query_dict):
             'style': generate_style_func(cmap, '', 0, desc_col_new),
             'highlight': generate_style_func(cmap, 'black', 1, desc_col_new)
         })
+        st.session_state['layer_id'] += 1
 
 def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", height=500, width=500):
     metadata = {
@@ -355,7 +360,7 @@ def prepare_shapefile():
 
     if 'emb.shapefile.ok' not in st.session_state:
         st.session_state['emb.shapefile.ok'] = False
-    print(st.session_state['emb.shapefile.ok'])
+
     with st.expander("Shape file", expanded = not st.session_state['emb.shapefile.ok']):
         col1, col2 = st.columns(2)
         with col1:
@@ -445,11 +450,10 @@ def prepare_shapefile():
                 st.error("'Embedding model' has not been set.")
                 return False
             else:
+                st.info("Looks good!", icon=":material/thumb_up:")
                 return True
             
-        check = st.button("Looks good", icon=":material/thumb_up:")
-        if check:
-            st.session_state['emb.shapefile.ok'] = check_shapefile()
+        st.session_state['emb.shapefile.ok'] = check_shapefile()
             
 
 @st.fragment
@@ -578,16 +582,17 @@ def generate_new_layers():
 
 @st.fragment
 def show_layers():
-    for i, item in enumerate(st.session_state['temp_gpd_data']):
+    for ind, item in enumerate(st.session_state['temp_gpd_data']):
 
         col1, col2, col3 = st.columns([0.3, 0.4, 0.3])
 
         with col1:
+            # pop_key = f"emb.pop.{item['id']}"
             with st.popover(item['name'], icon=":material/visibility:"):
                 st.write("_Description_:", item['desc'])
         
         with col2:
-            slider_key = f"emb.slider.{item['name']}"
+            slider_key = f"emb.slider.{item['id']}"
             st.slider(
                 item['name'],
                 min_value = st.session_state['threshold_min'],
@@ -599,10 +604,10 @@ def show_layers():
             )
 
         with col3:
-            if st.button("remove", icon=":material/delete:", key=f"emb.layer{i}.rm"):
-                del st.session_state['temp_gpd_data'][i]
-                # st.rerun(scope="fragment")
-
+            rm_key = f"emb.rm.{item['id']}"
+            if st.button("remove", icon=":material/delete:", key=rm_key):
+                st.session_state['temp_gpd_data'].pop(ind)
+                st.rerun(scope="fragment")
         # m.add_gdf(
         #     gpd_data_filtered,
         #     layer_name=item['name'],
