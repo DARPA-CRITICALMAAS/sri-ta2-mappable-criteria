@@ -381,8 +381,8 @@ def prepare_shapefile():
                 label_visibility="collapsed",
                 key='emb.shapefile',
             )
-            if not polygon_file:
-                st.warning("Please select a polygon file.")
+            # if not polygon_file:
+            #     st.warning("Please select a polygon file.")
         # if polygon_file:
         #     selected_polygon = os.path.join(st.session_state['preproc_dir'], polygon_file)
         # else:
@@ -420,8 +420,8 @@ def prepare_shapefile():
                 index=ind_c,
                 key="emb.desc_col",
             )
-            if not desc_col:
-                st.warning("Please select a description column")
+            # if not desc_col:
+            #     st.warning("Please select a description column")
 
         with col_c:
             models = ["iaross/cm_bert", "Alibaba-NLP/gte-large-en-v1.5"]
@@ -436,18 +436,18 @@ def prepare_shapefile():
                 index=ind_c,
                 key="emb.model"
             )
-            if not model_name:
-                st.warning("Please select a model.")
+            # if not model_name:
+            #     st.warning("Please select a model.")
 
         def check_shapefile():
             if not st.session_state['emb.shapefile']:
-                st.error("Shapefile has not been set.")
+                st.error("'Shape file' field has not been set.")
                 return False
             elif not st.session_state['emb.desc_col']:
-                st.error("'Description column' has not been set.")
+                st.error("'Description column' field has not been set.")
                 return False
             elif not st.session_state['emb.model']:
-                st.error("'Embedding model' has not been set.")
+                st.error("'Embedding model' field has not been set.")
                 return False
             else:
                 st.info("Looks good!", icon=":material/thumb_up:")
@@ -469,6 +469,7 @@ def generate_new_layers():
                 query = st.text_input(
                     "Query",
                     label_visibility="collapsed",
+                    placeholder="query"
                 )
             with col2:
                 query_name = st.text_input(
