@@ -50,11 +50,13 @@ download_dir = os.path.join(workdir_output, "download")
 download_dir_sgmc = os.path.join(download_dir, "sgmc")
 download_dir_ta1 = os.path.join(download_dir, "ta1")
 download_dir_user = os.path.join(download_dir, "user")
-mkdirs.extend([download_dir, download_dir_sgmc, download_dir_ta1, download_dir_user])
+download_dir_user_boundary = os.path.join(download_dir, "user", "boundary")
+mkdirs.extend([download_dir, download_dir_sgmc, download_dir_ta1, download_dir_user, download_dir_user_boundary])
 st.session_state['download_dir'] = download_dir
 st.session_state['download_dir_sgmc'] = download_dir_sgmc
 st.session_state['download_dir_ta1'] = download_dir_ta1
 st.session_state['download_dir_user'] = download_dir_user
+st.session_state['download_dir_user_boundary'] = download_dir_user_boundary
 
 # preproc dirs
 preproc_dir = os.path.join(workdir_output, "preproc")
