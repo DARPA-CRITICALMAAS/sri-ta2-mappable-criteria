@@ -23,6 +23,15 @@ from sentence_transformers import SentenceTransformer
 from branca.colormap import linear
 
 
+st.markdown("""
+<style>
+	[data-testid="stDecoration"] {
+		display: none;
+	}
+
+</style>""",
+unsafe_allow_html=True)
+
 class Cmap(object):
     def __init__(self):
         super().__init__()
@@ -44,9 +53,9 @@ if not st.session_state.get("password_correct", False):
     st.stop()
 
 # st.logo(st.session_state['logo'], size="large")
-cols = st.columns([0.4, 0.2, 0.4])
-with cols[1]:
-    st.image(st.session_state['logo'], use_container_width=True)
+# cols = st.columns([0.4, 0.2, 0.4])
+# with cols[1]:
+#     st.image(st.session_state['logo'], use_container_width=True)
 
 if 'temp_gpd_data' not in st.session_state:
     st.session_state['temp_gpd_data'] = []
@@ -308,7 +317,7 @@ def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", heigh
     return metadata
 
 
-@st.dialog(title="Upload", width="small")
+@st.dialog(title="Upload boundary files", width="large")
 def upload_boundary():
     uploaded_files = st.file_uploader(
         "Upload your own boundary files:", accept_multiple_files=True
@@ -322,18 +331,17 @@ def upload_boundary():
     if len(uploaded_files) > 0:
         st.info("Finished uploading. You can now close this window.")
 
-@st.dialog(title="Drawing boundaries", width="small")
+@st.dialog(title="Draw boundaries", width="large")
 def show_drawing_instruction():
     st.write(
         """
         1. Draw polygons using the tools at the top left corner of the map.
-        2. Click the 'Save boundary' button under the map and save the polygon(s) into file.
-        3. Come back and select the newly created boundary.
+        2. Click the 'Save boundary' button and save the polygon(s) into file.
         """
     )
 
 
-@st.dialog(title="Save boundary", width="small")
+@st.dialog(title="Save boundary", width="large")
 def save_drawings():
     if not st.session_state['user_drawings']['features']:
         st.error("No polygons have been drawn. Please close this window and draw polygons on the map.")
@@ -352,9 +360,10 @@ def save_drawings():
             label_visibility='collapsed'
         )
     with col2:
-        ext = st.text_input(
+        ext = st.selectbox(
             "extension",
-            ".geojson",
+            [".geojson", ".shp", "gpkg"],
+            index=0,
             # label_visibility='collapsed',
             disabled=True,
         )
@@ -365,12 +374,13 @@ def save_drawings():
         elif fname in existing_fnames:
             st.error("File already existed")
         else:
-            fnamefull = os.path.join(st.session_state['download_dir_user_boundary'], '.'.join([fname, ext]))
+            fnamefull = os.path.join(st.session_state['download_dir_user_boundary'], fname + ext)
             with open(fnamefull, 'w') as f:
                 geojson.dump(st.session_state['user_drawings'], f)
+            st.info(f"Boundary file saved as *{fname + ext}*. You can now close this window.")
 
 
-@st.dialog(title="Download", width="small")
+@st.dialog(title="Download layers", width="large")
 def download_layers():
     if len(st.session_state['temp_gpd_data']) == 0:
         st.error("There are no text embedding layers generated yet.")
@@ -400,8 +410,8 @@ def download_layers():
     )
 
 
-@st.dialog(title="Push to CDR", width="small")
-def push_layers_to_cdr():
+@st.dialog(title="Push layers to CDR", width="large")
+def push_layers_to_cdr(debug=True):
     if len(st.session_state['temp_gpd_data']) == 0:
         st.error("There are no text embedding layers generated yet.")
         return
@@ -418,16 +428,26 @@ def push_layers_to_cdr():
                     desc = item['desc']
                     layer = item['data_filtered'].rename(columns={col_name: 'query_sim'}) # Ten-character limitation to Shapefile attributes
 
-                    metadata = make_metadata(col_name, "shp", st.session_state['emb.dep_type'], desc, "15month_test", sysver="v1.2")
-                    # with open(f'{col_name}.json', 'w') as f:
-                    #     json.dump(metadata, f)  
-                    content = get_zip_shp(layer, col_name)
-                    response = push_to_cdr(cdr_key, metadata, filepath=col_name+".zip", content=content)
-                    print(response.status_code, response.content)
-                    st.info(str(response.status_code) + ' ' + str(response.content))
+                    metadata = make_metadata(col_name, "zip", st.session_state['emb.dep_type'], desc, "15month_test", sysver="v1.2")             
+                    content = get_zip_shp(layer, col_name, add_meta=desc)
+
+                    if debug:
+                        with open(os.path.join(st.session_state['tmp_dir'], f'{col_name}.json'), 'w') as f:
+                            json.dump(metadata, f)  
+                        st.download_button(
+                            label=f"cdr.{col_name}",
+                            data=content,
+                            file_name="layers.zip",
+                            mime="application/zip",
+                            icon=":material/download:"
+                        )
+                    else:
+                        response = push_to_cdr(cdr_key, metadata, filepath=col_name+".zip", content=content)
+                        print(response.status_code, response.content)
+                        st.info(str(response.status_code) + ' ' + str(response.content))
 
 
-@st.fragment
+@st.dialog("Prepare shapefile", width="large")
 def prepare_shapefile():
     for key in ['emb.shapefile', 'emb.desc_col', 'emb.model']:
         if not key in st.session_state:
@@ -439,238 +459,229 @@ def prepare_shapefile():
     if 'emb.shapefile.ok' not in st.session_state:
         st.session_state['emb.shapefile.ok'] = False
 
-    with st.expander("", icon=":material/pentagon:"):
-        col1, col2, col2a, col2b, colc = st.columns([0.4,0.4,0.05,0.05, 0.1], vertical_alignment="bottom")
-        with col1:
-            sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
-            ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
+    col1, col2, col2a, col2b = st.columns([0.4,0.4,0.1,0.1], vertical_alignment="bottom")
+    with col1:
+        sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
+        ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
 
-            polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons]
+        polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons]
+        
+        if not st.session_state['emb.shapefile']:
+            ind = None
+        else:
+            ind = polygons.index(st.session_state['emb.shapefile'])
+
+        polygon_file = st.selectbox(
+            "Shape file",
+            polygons,
+            index=ind,
+            # label_visibility="collapsed",
+            key='emb.shapefile',
+        )
+        # if not polygon_file:
+        #     st.warning("Please select a polygon file.")
+    # if polygon_file:
+    #     selected_polygon = os.path.join(st.session_state['preproc_dir'], polygon_file)
+    # else:
+    #     selected_polygon = None
+
+    # with col2:
+        # st.page_link("st_page_polygons.py", label="Create shape files", icon=":material/add:")
+        # pass
+    with col2:
+        # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
+        boundary_files = ['N/A'] + os.listdir(st.session_state['download_dir_user_boundary'])
+        ind = boundary_files.index(st.session_state['emb.area'])
+        boundary_file = st.selectbox(
+            "Boundary",
+            boundary_files,
+            index=ind,
+            key='emb.area',
+            # label_visibility='collapsed'
+        )
+
+    col_a, col_b = st.columns([0.5, 0.5], vertical_alignment="bottom")
+
+    with col_a:
+        if not st.session_state['emb.shapefile']:
+            columns = []
+        else:
+            columns = list(load_shape_file(
+                os.path.join(st.session_state['preproc_dir'], st.session_state['emb.shapefile'])).columns)
+            if 'full_desc' in columns:
+                st.session_state['emb.desc_col'] = 'full_desc'
             
-            if not st.session_state['emb.shapefile']:
-                ind = None
-            else:
-                ind = polygons.index(st.session_state['emb.shapefile'])
+        if not st.session_state['emb.desc_col']:
+            ind_c = None
+        else:
+            ind_c = columns.index(st.session_state["emb.desc_col"])
 
-            polygon_file = st.selectbox(
-                "Shape file",
-                polygons,
-                index=ind,
-                # label_visibility="collapsed",
-                key='emb.shapefile',
-            )
-            # if not polygon_file:
-            #     st.warning("Please select a polygon file.")
-        # if polygon_file:
-        #     selected_polygon = os.path.join(st.session_state['preproc_dir'], polygon_file)
-        # else:
-        #     selected_polygon = None
+        desc_col = st.selectbox(
+            "Description column",
+            columns,
+            index=ind_c,
+            key="emb.desc_col",
+            disabled=True,
+        )
+        # if not desc_col:
+        #     st.warning("Please select a description column")
 
-        # with col2:
-            # st.page_link("st_page_polygons.py", label="Create shape files", icon=":material/add:")
-            # pass
-        with col2:
-            # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
-            boundary_files = ['N/A'] + os.listdir(st.session_state['download_dir_user_boundary'])
-            ind = boundary_files.index(st.session_state['emb.area'])
-            boundary_file = st.selectbox(
-                "Boundary",
-                boundary_files,
-                index=ind,
-                key='emb.area',
-                # label_visibility='collapsed'
-            )
-        with col2a:
-            if st.button("", icon=":material/upload:", help="upload boundary file"):
-                upload_boundary()
-        with col2b:
-            if st.button("", icon=":material/draw:", help="draw boundary"):
-                show_drawing_instruction()
+    with col_b:
+        models = ["iaross/cm_bert", "Alibaba-NLP/gte-large-en-v1.5"]
+        if not st.session_state['emb.model']:
+            ind_c=None
+        else:
+            ind_c = models.index(st.session_state['emb.model'])
 
-        col_a, col_b, col_c = st.columns([0.3, 0.3, 0.4], vertical_alignment="bottom")
- 
-        with col_a:
-            if not st.session_state['emb.shapefile']:
-                columns = []
-            else:
-                columns = list(load_shape_file(
-                    os.path.join(st.session_state['preproc_dir'], st.session_state['emb.shapefile'])).columns)
-                if 'full_desc' in columns:
-                    st.session_state['emb.desc_col'] = 'full_desc'
-                
-            if not st.session_state['emb.desc_col']:
-                ind_c = None
-            else:
-                ind_c = columns.index(st.session_state["emb.desc_col"])
+        model_name = st.selectbox(
+            "Embedding model",
+            models,
+            index=ind_c,
+            key="emb.model"
+        )
+        # if not model_name:
+        #     st.warning("Please select a model.")
 
-            desc_col = st.selectbox(
-                "Description column",
-                columns,
-                index=ind_c,
-                key="emb.desc_col",
-                disabled=True,
-            )
-            # if not desc_col:
-            #     st.warning("Please select a description column")
-
-        with col_b:
-            models = ["iaross/cm_bert", "Alibaba-NLP/gte-large-en-v1.5"]
-            if not st.session_state['emb.model']:
-                ind_c=None
-            else:
-                ind_c = models.index(st.session_state['emb.model'])
-
-            model_name = st.selectbox(
-                "Embedding model",
-                models,
-                index=ind_c,
-                key="emb.model"
-            )
-            # if not model_name:
-            #     st.warning("Please select a model.")
-
-        def check_shapefile():
-            if not st.session_state['emb.shapefile']:
-                st.error("missing **Shape file**")
-                return False
-            elif not st.session_state['emb.desc_col']:
-                st.error("missing **Description column**")
-                return False
-            elif not st.session_state['emb.model']:
-                st.error("missing **Embedding model**")
-                return False
-            else:
-                st.info("Looks good!", icon=":material/thumb_up:")
-                return True
-            
-        st.session_state['emb.shapefile.ok'] = check_shapefile()
+    def check_shapefile():
+        if not st.session_state['emb.shapefile']:
+            st.error("missing **Shape file**")
+            return False
+        elif not st.session_state['emb.desc_col']:
+            st.error("missing **Description column**")
+            return False
+        elif not st.session_state['emb.model']:
+            st.error("missing **Embedding model**")
+            return False
+        else:
+            st.info("Looks good!", icon=":material/thumb_up:")
+            return True
+        
+    st.session_state['emb.shapefile.ok'] = check_shapefile()
             
 
 @st.fragment
 def generate_new_layers():
         
-    with st.expander("", icon=":material/search:"):
-        tab1, tab2 = st.tabs(["Custom query", "Deposit model"])
+    tab1, tab2 = st.tabs(["Custom query", "Deposit model"])
 
-        with tab1:
+    with tab1:
 
-            col1, col2, col3 = st.columns([0.7, 0.15, 0.15])
-            with col1:
-                query = st.text_input(
-                    "Query",
-                    label_visibility="collapsed",
-                    placeholder="query"
-                )
-            with col2:
-                query_name = st.text_input(
-                    "query name",
-                    label_visibility="collapsed",
-                    placeholder="short name"
-                )
-            with col3:
-                clicked = st.button("Search", icon=":material/search:", key="emb.query_search", type="primary")
+        col1, col2, col3 = st.columns([0.7, 0.15, 0.15])
+        with col1:
+            query = st.text_input(
+                "Query",
+                label_visibility="collapsed",
+                placeholder="query"
+            )
+        with col2:
+            query_name = st.text_input(
+                "query name",
+                label_visibility="collapsed",
+                placeholder="short name"
+            )
+        with col3:
+            clicked = st.button("Search", icon=":material/search:", key="emb.query_search", type="primary")
 
-            if clicked:
-                if not query:
-                    st.error("Please type in a query in the search box.")
-                elif not query_name:
-                    st.error("Please type in a short name for the query.")
-                else:
-                    temp_query = {query_name: query}
-                    gpd_data = query_polygons(
-                        st.session_state['emb.shapefile'],
-                        st.session_state['emb.area'],
-                        st.session_state['emb.desc_col'],
-                        st.session_state['emb.model'],
-                        query=temp_query)
-                    
-                    add_temp_layer(gpd_data, query_dict = temp_query)
-                    st.rerun()
-
-        with tab2:
-            # compute new layers
-            cola, colb, colc = st.columns([0.4, 0.4, 0.2])
-            with cola:
-                files = [fname.replace('.json', '') for fname in os.listdir(st.session_state['deposit_model_dir']) if fname.endswith('.json')]
-                files.sort()
-                dep_model_file = st.selectbox(
-                    'choose a deposit model file',
-                    files,
-                    label_visibility="collapsed",
-                    key='emb.dep_model_file'
-                )
-                if not dep_model_file:
-                    st.warning("Please select a deposit model file")
-            
-            with colb:
-                if dep_model_file:
-                    selected_dep_model_file = os.path.join(st.session_state['deposit_model_dir'], dep_model_file+'.json')
-                    with open(selected_dep_model_file, 'r') as f:
-                        dep_models = json.load(f)
-
-                    selected_dep_type = st.selectbox(
-                        "select deposit type",
-                        list(dep_models.keys()),
-                        index=None,
-                        label_visibility="collapsed",
-                        key='emb.dep_type'
-                    )
-                    if not selected_dep_type:
-                        st.warning("Please select a deposit type")
-            with colc:
-                # st.page_link("st_page_dep_models.py", label="Edit deposit models", icon=":material/edit:")
-                pass
-
-            if selected_dep_type:
-                dep_model = dep_models[selected_dep_type]
-
-                data_df = pd.DataFrame(
-                    [{'process': False, 'Characteristic':k, 'Description':v} for k, v in dep_model.items()]
-                )
-                edited_df = st.data_editor(
-                    data_df,
-                    column_config = {
-                        'process': st.column_config.CheckboxColumn(
-                            "Generate?",
-                            width="medium",
-                            help="Each selected characteristic will be processed to generate a corresponding text embedding layer.",
-                            default=False,
-                        )
-                    },
-                    disabled=['Characteristic', 'Description'],
-                    hide_index=True,
-                    use_container_width=True,
-                )
-                selected_characteristics = edited_df[edited_df['process']]['Characteristic'].tolist()
-                if not selected_characteristics:
-                    st.warning("Please select at least one characteristic from the list above.")
+        if clicked:
+            if not 'emb.shapefile.ok' in st.session_state or not st.session_state['emb.shapefile.ok']:
+                st.error("Please select shape files first.")
+            elif not query:
+                st.error("Please type in a query in the search box.")
+            elif not query_name:
+                st.error("Please type in a short name for the query.")
+            else:
+                temp_query = {query_name: query}
+                gpd_data = query_polygons(
+                    st.session_state['emb.shapefile'],
+                    st.session_state['emb.area'],
+                    st.session_state['emb.desc_col'],
+                    st.session_state['emb.model'],
+                    query=temp_query)
                 
+                add_temp_layer(gpd_data, query_dict = temp_query)
+                st.rerun()
 
-            # cma_label = st.text_input("Create a lable")
+    with tab2:
+        # compute new layers
+        cola, colb, colc = st.columns([0.4, 0.4, 0.2])
+        with cola:
+            files = [fname.replace('.json', '') for fname in os.listdir(st.session_state['deposit_model_dir']) if fname.endswith('.json')]
+            files.sort()
+            dep_model_file = st.selectbox(
+                'choose a deposit model file',
+                files,
+                label_visibility="collapsed",
+                key='emb.dep_model_file'
+            )
+        
+        with colb:
+            if dep_model_file:
+                selected_dep_model_file = os.path.join(st.session_state['deposit_model_dir'], dep_model_file+'.json')
+                with open(selected_dep_model_file, 'r') as f:
+                    dep_models = json.load(f)
 
-            # output_dir = os.path.join(output_dir_layers, cma_label)
-            # os.makedirs(output_dir, exist_ok=True)
+                selected_dep_type = st.selectbox(
+                    "select deposit type",
+                    list(dep_models.keys()),
+                    index=None,
+                    label_visibility="collapsed",
+                    key='emb.dep_type'
+                )
+                # if not selected_dep_type:
+                #     st.warning("Please select a deposit type")
+        with colc:
+            # st.page_link("st_page_dep_models.py", label="Edit deposit models", icon=":material/edit:")
+            pass
 
-            clicked_run = st.button("Search", icon=":material/search:", key="emb.dep_model_search", type="primary")
-            if clicked_run:
-                if not dep_model_file:
-                    st.error("No deposit model file has been selected.")
-                elif not selected_dep_type:
-                    st.error("No deposit type has been selected.")
-                elif len(selected_characteristics) == 0:
-                    st.error("No characteristics in the deposit model have been selected.")
-                else:
-                    temp_dep_model = {k: dep_model[k] for k in selected_characteristics}
-                    gpd_data = query_polygons(
-                        st.session_state['emb.shapefile'],
-                        st.session_state['emb.area'],
-                        st.session_state['emb.desc_col'],
-                        st.session_state['emb.model'],
-                        query=temp_dep_model
+        if selected_dep_type:
+            dep_model = dep_models[selected_dep_type]
+
+            data_df = pd.DataFrame(
+                [{'process': False, 'Characteristic':k, 'Description':v} for k, v in dep_model.items()]
+            )
+            edited_df = st.data_editor(
+                data_df,
+                column_config = {
+                    'process': st.column_config.CheckboxColumn(
+                        "Generate?",
+                        width="medium",
+                        help="Each selected characteristic will be processed to generate a corresponding text embedding layer.",
+                        default=False,
                     )
-                    
-                    add_temp_layer(gpd_data, query_dict=temp_dep_model)
-                    st.rerun()
+                },
+                disabled=['Characteristic', 'Description'],
+                hide_index=True,
+                use_container_width=True,
+            )
+            selected_characteristics = edited_df[edited_df['process']]['Characteristic'].tolist()
+            
+        # cma_label = st.text_input("Create a lable")
+
+        # output_dir = os.path.join(output_dir_layers, cma_label)
+        # os.makedirs(output_dir, exist_ok=True)
+
+        clicked_run = st.button("Search", icon=":material/search:", key="emb.dep_model_search", type="primary")
+        if clicked_run:
+            if not 'emb.shapefile.ok' in st.session_state or not st.session_state['emb.shapefile.ok']:
+                st.error("Please select shape files first.")
+            elif not st.session_state['emb.dep_model_file']:
+                st.error("No deposit model file has been selected.")
+            elif not st.session_state['emb.dep_type']:
+                st.error("No deposit type has been selected.")
+            elif len(selected_characteristics) == 0:
+                st.error("No characteristics in the deposit model have been selected.")
+            else:
+                temp_dep_model = {k: dep_model[k] for k in selected_characteristics}
+                gpd_data = query_polygons(
+                    st.session_state['emb.shapefile'],
+                    st.session_state['emb.area'],
+                    st.session_state['emb.desc_col'],
+                    st.session_state['emb.model'],
+                    query=temp_dep_model
+                )
+                
+                add_temp_layer(gpd_data, query_dict=temp_dep_model)
+                st.rerun()
 
 @st.fragment
 def show_layers():
@@ -747,6 +758,7 @@ def show_layers():
     #                     response = push_to_cdr(cdr_key, metadata, tif_fname)
     #                     st.info(response)
 
+
     map_container = st.container(height=800, border=False)
 
     with map_container:
@@ -797,16 +809,31 @@ def show_layers():
         }
 
 
-prepare_shapefile()
-generate_new_layers()
-show_layers()
+col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
 
-if st.button("Save boundary", icon=":material/save_as:"):
-    save_drawings()
+with col_menu:
+    if st.button("", icon=":material/pentagon:", help="Prepare shapefile", type="primary"):
+        prepare_shapefile()
 
-if st.button("Download layers", icon=":material/download:"):
-    download_layers()
+    if st.button("", icon=":material/upload:", help="Upload boundary files", type="secondary"):
+        upload_boundary()
 
-if st.button("Push layers to CDR", icon=":material/cloud_upload:"):
-    push_layers_to_cdr()
+    if st.button("", icon=":material/draw:", help="Draw boundaries", type="secondary"):
+        show_drawing_instruction()
+
+    if st.button("", icon=":material/save_as:", help="Save boundary", type="secondary"):
+        save_drawings()
+
+    if st.button("", icon=":material/download:", help="Download layers", type="primary"):
+        download_layers()
+
+    if st.button("", icon=":material/cloud_upload:", help="Push layers to CDR", type="primary"):
+        push_layers_to_cdr()
+
+with col_map:
+    generate_new_layers()
+    st.divider()
+    show_layers()
+
+
 

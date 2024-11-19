@@ -6,6 +6,21 @@ import os
 import hmac
 
 
+st.set_page_config(
+    page_title="QueryPlot",
+    page_icon='./images/Q_icon.svg',
+    layout="wide",
+)
+
+st.markdown("""
+<style>
+	[data-testid="stDecoration"] {
+		display: none;
+	}
+
+</style>""",
+unsafe_allow_html=True)
+
 def check_password():
     """Returns `True` if the user had the correct password."""
 
@@ -22,15 +37,14 @@ def check_password():
         return True
 
     # Show input for password.
-    st.text_input(
-        "Password", type="password", on_change=password_entered, key="password"
-    )
+    cols = st.columns([0.3,0.4,0.3])
+    with cols[1]:
+        st.text_input(
+            "Password", type="password", on_change=password_entered, key="password"
+        )
     if "password_correct" in st.session_state:
         st.error("😕 Password incorrect")
     return False
-
-if not check_password():
-    st.stop()  # Do not continue if check_password is not True.
 
 
 mkdirs = []
@@ -99,8 +113,8 @@ if 'embed_model' not in st.session_state:
     st.session_state['embed_model'] = None
     st.session_state['embed_polygon'] = None
 
-st.session_state['logo'] = os.path.join(st.session_state['workdir'], './images/logo.png')
-st.session_state['Q_icon'] = os.path.join(st.session_state['workdir'], './images/Q_icon.svg')
+st.session_state['logo'] = os.path.join(st.session_state['workdir'], 'images/logo.png')
+st.session_state['Q_icon'] = os.path.join(st.session_state['workdir'], 'images/Q_icon.svg')
 # st.logo(st.session_state['logo'], size="large")
 
 st.session_state['threshold_min'] = 0.8
@@ -114,6 +128,14 @@ st.session_state['threshold_default']=0.9
 # st.session_state['emb.desc_col'] = None
 # st.session_state['emb.model'] = None
 
+
+cols = st.columns([0.4, 0.2, 0.4])
+with cols[1]:
+    st.image(st.session_state['logo'], use_container_width=True)
+
+if not check_password():
+    st.stop()  # Do not continue if check_password is not True.
+
 pg = st.navigation([
         st.Page("st_page_embs.py"),
         st.Page("st_page_polygons.py"),
@@ -121,10 +143,6 @@ pg = st.navigation([
     ]
     , position="hidden"
 )
-st.set_page_config(
-    page_title="QueryPlot",
-    page_icon=st.session_state["Q_icon"],
-    layout="wide",
-)
+
 
 pg.run()
