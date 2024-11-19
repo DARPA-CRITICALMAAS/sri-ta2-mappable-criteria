@@ -46,7 +46,7 @@ if not st.session_state.get("password_correct", False):
 # st.logo(st.session_state['logo'], size="large")
 cols = st.columns([0.4, 0.2, 0.4])
 with cols[1]:
-    st.image(st.session_state['logo'], use_column_width=True)
+    st.image(st.session_state['logo'], use_container_width=True)
 
 if 'temp_gpd_data' not in st.session_state:
     st.session_state['temp_gpd_data'] = []
@@ -326,9 +326,9 @@ def upload_boundary():
 def show_drawing_instruction():
     st.write(
         """
-        1. Draw polygons using the top left corner of the map.
-        2. Click the 'Save boundary' button and save the polygon into file.
-        3. Select the newly created boundary in the drop down list.
+        1. Draw polygons using the tools at the top left corner of the map.
+        2. Click the 'Save boundary' button under the map and save the polygon(s) into file.
+        3. Come back and select the newly created boundary.
         """
     )
 
@@ -440,7 +440,7 @@ def prepare_shapefile():
         st.session_state['emb.shapefile.ok'] = False
 
     with st.expander("", icon=":material/pentagon:"):
-        col1, col2 = st.columns(2)
+        col1, col2, col2a, col2b, colc = st.columns([0.4,0.4,0.05,0.05, 0.1], vertical_alignment="bottom")
         with col1:
             sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
             ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
@@ -466,30 +466,30 @@ def prepare_shapefile():
         # else:
         #     selected_polygon = None
 
-        with col2:
+        # with col2:
             # st.page_link("st_page_polygons.py", label="Create shape files", icon=":material/add:")
-            pass
-
-        col_a, col_a1, col_a2, col_b, col_c = st.columns([0.3, 0.05,  0.05, 0.3, 0.3], vertical_alignment="bottom")
-        with col_a:
+            # pass
+        with col2:
             # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
             boundary_files = ['N/A'] + os.listdir(st.session_state['download_dir_user_boundary'])
             ind = boundary_files.index(st.session_state['emb.area'])
             boundary_file = st.selectbox(
-                "Boundary file",
+                "Boundary",
                 boundary_files,
                 index=ind,
                 key='emb.area',
                 # label_visibility='collapsed'
             )
-        with col_a1:
-            if st.button("", icon=":material/upload:"):
+        with col2a:
+            if st.button("", icon=":material/upload:", help="upload boundary file"):
                 upload_boundary()
-        with col_a2:
-            if st.button("", icon=":material/draw:"):
+        with col2b:
+            if st.button("", icon=":material/draw:", help="draw boundary"):
                 show_drawing_instruction()
 
-        with col_b:
+        col_a, col_b, col_c = st.columns([0.3, 0.3, 0.4], vertical_alignment="bottom")
+ 
+        with col_a:
             if not st.session_state['emb.shapefile']:
                 columns = []
             else:
@@ -513,7 +513,7 @@ def prepare_shapefile():
             # if not desc_col:
             #     st.warning("Please select a description column")
 
-        with col_c:
+        with col_b:
             models = ["iaross/cm_bert", "Alibaba-NLP/gte-large-en-v1.5"]
             if not st.session_state['emb.model']:
                 ind_c=None
