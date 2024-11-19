@@ -801,7 +801,7 @@ prepare_shapefile()
 generate_new_layers()
 show_layers()
 
-if st.button("Save boundary", icon=":material/save:"):
+if st.button("Save boundary", icon=":material/save_as:"):
     save_drawings()
 
 if st.button("Download layers", icon=":material/download:"):
