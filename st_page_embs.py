@@ -141,10 +141,12 @@ def generate_style_func(cmap, line_color, weight, attribute):
 
 def generate_slider_on_change(slider_key, layer_name):
     def slider_on_change():
-        threshold = st.session_state[slider_key]
+        th_min, th_max = st.session_state[slider_key]
         for item in st.session_state['temp_gpd_data']:
             if item['name'] == layer_name:
-                item['data_filtered'] = item['data'][item['data'][layer_name] >= threshold]
+                item['data_filtered'] = item['data'][
+                    item['data'][layer_name].between(th_min, th_max)
+                ]
     return slider_on_change
 
 
@@ -320,45 +322,60 @@ def upload_boundary():
     if len(uploaded_files) > 0:
         st.info("Finished uploading. You can now close this window.")
 
+@st.dialog(title="Drawing boundaries", width="small")
+def show_drawing_instruction():
+    st.write(
+        """
+        1. Draw polygons using the top left corner of the map.
+        2. Click the 'Save boundary' button and save the polygon into file.
+        3. Select the newly created boundary in the drop down list.
+        """
+    )
+
+
 @st.dialog(title="Save boundary", width="small")
 def save_drawings():
     if not st.session_state['user_drawings']['features']:
         st.error("No polygons have been drawn. Please close this window and draw polygons on the map.")
-    else:
-        with st.container(height=400):
-            st.write("preview")
-            st.write(st.session_state['user_drawings'])
+        return
+    with st.container(height=400):
+        st.write("preview")
+        st.write(st.session_state['user_drawings'])
 
-        existing_fnames = os.listdir(st.session_state['download_dir_user_boundary'])
+    existing_fnames = os.listdir(st.session_state['download_dir_user_boundary'])
 
-        col1, col2 = st.columns(2, vertical_alignment="bottom")
-        with col1:
-            fname = st.text_input(
-                "",
-                placeholder="type in a name for the boundary",
-                label_visibility='collapsed'
-            )
-        with col2:
-            ext = st.text_input(
-                "extension",
-                ".geojson",
-                # label_visibility='collapsed',
-                disabled=True,
-            )
+    col1, col2 = st.columns(2, vertical_alignment="bottom")
+    with col1:
+        fname = st.text_input(
+            "",
+            placeholder="type in a name for the boundary",
+            label_visibility='collapsed'
+        )
+    with col2:
+        ext = st.text_input(
+            "extension",
+            ".geojson",
+            # label_visibility='collapsed',
+            disabled=True,
+        )
 
-        if st.button("Save"):
-            if not fname:
-                st.error("Please type in a name")
-            elif fname in existing_fnames:
-                st.error("File already existed")
-            else:
-                fnamefull = os.path.join(st.session_state['download_dir_user_boundary'], '.'.join([fname, ext]))
-                with open(fnamefull, 'w') as f:
-                    geojson.dump(st.session_state['user_drawings'], f)
+    if st.button("Save"):
+        if not fname:
+            st.error("Please type in a name")
+        elif fname in existing_fnames:
+            st.error("File already existed")
+        else:
+            fnamefull = os.path.join(st.session_state['download_dir_user_boundary'], '.'.join([fname, ext]))
+            with open(fnamefull, 'w') as f:
+                geojson.dump(st.session_state['user_drawings'], f)
 
 
 @st.dialog(title="Download", width="small")
 def download_layers():
+    if len(st.session_state['temp_gpd_data']) == 0:
+        st.error("There are no text embedding layers generated yet.")
+        return
+    
     # zip_buffer = get_zip_geoj(layers, names)
     layers = []
     names=[]
@@ -385,6 +402,10 @@ def download_layers():
 
 @st.dialog(title="Push to CDR", width="small")
 def push_layers_to_cdr():
+    if len(st.session_state['temp_gpd_data']) == 0:
+        st.error("There are no text embedding layers generated yet.")
+        return
+    
     cdr_key = st.text_input("Your CDR key:", type="password")
     st.write("Click the button below to push:")
     if st.button("", key="emb.push_to_cdr", icon=":material/cloud_upload:"):
@@ -449,7 +470,7 @@ def prepare_shapefile():
             # st.page_link("st_page_polygons.py", label="Create shape files", icon=":material/add:")
             pass
 
-        col_a, col_a_, col_b, col_c = st.columns([0.3, 0.1, 0.3, 0.3], vertical_alignment="bottom")
+        col_a, col_a1, col_a2, col_b, col_c = st.columns([0.3, 0.05,  0.05, 0.3, 0.3], vertical_alignment="bottom")
         with col_a:
             # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
             boundary_files = ['N/A'] + os.listdir(st.session_state['download_dir_user_boundary'])
@@ -461,8 +482,12 @@ def prepare_shapefile():
                 key='emb.area',
                 # label_visibility='collapsed'
             )
-        with col_a_:
-            st.button("", icon=":material/upload:", on_click=upload_boundary)
+        with col_a1:
+            if st.button("", icon=":material/upload:"):
+                upload_boundary()
+        with col_a2:
+            if st.button("", icon=":material/draw:"):
+                show_drawing_instruction()
 
         with col_b:
             if not st.session_state['emb.shapefile']:
@@ -664,7 +689,7 @@ def show_layers():
                 item['name'],
                 min_value = st.session_state['threshold_min'],
                 max_value = 1.0,
-                value = st.session_state['threshold_default'],
+                value = (st.session_state['threshold_default'], 1.0),
                 key=slider_key,
                 on_change=generate_slider_on_change(slider_key, item['name']),
                 label_visibility='collapsed'
@@ -722,72 +747,66 @@ def show_layers():
     #                     response = push_to_cdr(cdr_key, metadata, tif_fname)
     #                     st.info(response)
 
-    m = folium.Map(
-        location=(38, -100),
-        zoom_start=4,
-        min_zoom=2,
-        max_zoom=20,
-        tiles='Cartodb Positron',
-    )
-    folium.plugins.Draw(
-        export=True,
-        draw_options={"polyline":False, "circle":False, "circle":False, "circlemarker":False},
-    ).add_to(m)
+    map_container = st.container(height=800, border=False)
 
-    fgroups = []
-    for item in st.session_state['temp_gpd_data']:
-        fg = folium.FeatureGroup(name=item['name'])
-        tooltip = folium.GeoJsonTooltip(
-            fields=[st.session_state['emb.desc_col'], item['name']],
-            aliases=["description", f"query_sim ({item['name']})"],
-            localize=True,
-            sticky=True,
-            labels=True,
-            max_width=100,
+    with map_container:
+        m = folium.Map(
+            location=(38, -100),
+            zoom_start=4,
+            min_zoom=2,
+            max_zoom=20,
+            tiles='Cartodb Positron',
         )
-        fg.add_child(
-            folium.GeoJson(
-                data=item['data_filtered'],
-                style_function=item['style'],
-                highlight_function=item['highlight'],
-                tooltip=tooltip,
+        folium.plugins.Draw(
+            export=True,
+            draw_options={"polyline":False, "circle":False, "circle":False, "circlemarker":False},
+        ).add_to(m)
+
+        fgroups = []
+        for item in st.session_state['temp_gpd_data']:
+            fg = folium.FeatureGroup(name=item['name'])
+            tooltip = folium.GeoJsonTooltip(
+                fields=[st.session_state['emb.desc_col'], item['name']],
+                aliases=["description", f"query_sim ({item['name']})"],
+                localize=True,
+                sticky=True,
+                labels=True,
+                max_width=100,
             )
+            fg.add_child(
+                folium.GeoJson(
+                    data=item['data_filtered'],
+                    style_function=item['style'],
+                    highlight_function=item['highlight'],
+                    tooltip=tooltip,
+                )
+            )
+            fgroups.append(fg)
+
+        markers = st_folium(
+            m,
+            use_container_width=True,
+            returned_objects=["all_drawings"],
+            feature_group_to_add=fgroups,
+            layer_control=folium.LayerControl(collapsed=False),
         )
-        fgroups.append(fg)
 
-    markers = st_folium(
-        m,
-        use_container_width=True,
-        returned_objects=["all_drawings"],
-        feature_group_to_add=fgroups,
-        layer_control=folium.LayerControl(collapsed=False),
-    )
-
-    st.session_state['user_drawings'] = {
-        'type': 'FeatureCollection',
-        'features': markers['all_drawings']
-    }
-
-    st.button("Save boundary", icon=":material/save:", on_click=save_drawings)
-        
-
-
-def download_or_CDR():
-    if st.button("Download layers", icon=":material/download:"):
-        if len(st.session_state['temp_gpd_data']) == 0:
-            st.error("There are no text embedding layers generated yet.")
-        else:
-            download_layers()
-
-    if st.button("Push layers to CDR", icon=":material/cloud_upload:"):
-        if len(st.session_state['temp_gpd_data']) == 0:
-            st.error("There are no text embedding layers generated yet.")
-        else:
-            push_layers_to_cdr()
-
+        st.session_state['user_drawings'] = {
+            'type': 'FeatureCollection',
+            'features': markers['all_drawings']
+        }
 
 
 prepare_shapefile()
 generate_new_layers()
 show_layers()
-download_or_CDR()
+
+if st.button("Save boundary", icon=":material/save:"):
+    save_drawings()
+
+if st.button("Download layers", icon=":material/download:"):
+    download_layers()
+
+if st.button("Push layers to CDR", icon=":material/cloud_upload:"):
+    push_layers_to_cdr()
+
