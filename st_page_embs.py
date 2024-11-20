@@ -94,34 +94,43 @@ def load_hf_model(model_name="iaross/cm_bert"):
     return SentenceTransformer(model_name, trust_remote_code=True)
 
 @st.cache_data(persist="disk")
-def shape_file_overlay(selected_polygon, boundary_file):
+def shape_file_overlay(selected_polygon, desc_col, model_name, boundary_file):
+    data, vec = compute_vec(selected_polygon, desc_col, model_name)
 
+    if boundary_file == 'N/A':
+        # print('data', len(data))
+        # print('vec', vec.shape)
+        return data, vec
+    
+    data_ = data.copy()
+    data_['embeddings'] = list(vec)
+
+    area = load_shape_file(os.path.join(
+        st.session_state['download_dir_user_boundary'],
+        boundary_file
+    )).to_crs(data_.crs)
+
+    cols = data_.columns
+    data_ = data_.overlay(area, how="intersection")[cols]
+    vec_ = np.stack(data_['embeddings'])
+    data_.drop(columns=['embeddings'], inplace=True)
+    # print('data_', len(data_))
+    # print('vec_', vec_.shape)
+    return data_, vec_
+
+@st.cache_data(persist="disk")
+def compute_vec(selected_polygon, desc_col, model_name):
     data = load_shape_file(os.path.join(
         st.session_state['preproc_dir'],
         selected_polygon
     ))
-    if boundary_file == 'N/A':
-        return data
-    
-    area = load_shape_file(os.path.join(
-        st.session_state['download_dir_user_boundary'],
-        boundary_file
-    )).to_crs(data.crs)
-
-    cols = data.columns
-    data = data.overlay(area, how="intersection")[cols]
-    return data
-
-@st.cache_data(persist="disk")
-def compute_vec(selected_polygon, boundary_file, desc_col, model_name):
-    data = shape_file_overlay(selected_polygon, boundary_file)
     data = data[~data[desc_col].isna()]
     vec = convert_text_to_vector_hf(data[desc_col].to_list(), load_hf_model(model_name))
     return data, vec
 
 @st.cache_data
 def query_polygons(selected_polygon, boundary_file, desc_col, model_name, query):
-    data, emb = compute_vec(selected_polygon, boundary_file, desc_col, model_name)
+    data, emb = shape_file_overlay(selected_polygon, desc_col, model_name, boundary_file)
     gpd_data, _ = rank_polygon_single_query(
         query = query,
         embed_model = load_hf_model(model_name),
