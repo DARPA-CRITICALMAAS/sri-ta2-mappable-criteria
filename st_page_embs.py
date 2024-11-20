@@ -814,10 +814,8 @@ def show_layers():
             'features': markers['all_drawings']
         }
 
-
-col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
-
-with col_menu:
+@st.fragment
+def show_buttons():
     if st.button("", icon=":material/pentagon:", help="Prepare shapefile", type="primary"):
         prepare_shapefile()
 
@@ -835,6 +833,12 @@ with col_menu:
 
     if st.button("", icon=":material/cloud_upload:", help="Push layers to CDR", type="primary"):
         push_layers_to_cdr()
+
+
+col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
+
+with col_menu:
+    show_buttons()
 
 with col_map:
     generate_new_layers()
