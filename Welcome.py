@@ -117,6 +117,22 @@ st.session_state['logo'] = os.path.join(st.session_state['workdir'], 'images/log
 st.session_state['Q_icon'] = os.path.join(st.session_state['workdir'], 'images/Q_icon.svg')
 # st.logo(st.session_state['logo'], size="large")
 
+for key in ['emb.shapefile', 'emb.desc_col', 'emb.model']:
+    if not key in st.session_state:
+        st.session_state[key] = None
+
+if not 'emb.area' in st.session_state:
+    st.session_state['emb.area'] = 'N/A'
+
+if 'emb.shapefile.ok' not in st.session_state:
+    st.session_state['emb.shapefile.ok'] = False
+
+if 'temp_gpd_data' not in st.session_state:
+    st.session_state['temp_gpd_data'] = []
+
+if 'layer_id' not in st.session_state:
+    st.session_state['layer_id'] = 0
+
 st.session_state['threshold_min'] = 0.8
 st.session_state['threshold_default']=0.9
 

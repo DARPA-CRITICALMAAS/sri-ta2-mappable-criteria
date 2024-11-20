@@ -32,6 +32,11 @@ st.markdown("""
 </style>""",
 unsafe_allow_html=True)
 
+
+def set_st(key, value):
+    st.session_state[key] = value
+
+
 class Cmap(object):
     def __init__(self):
         super().__init__()
@@ -52,19 +57,12 @@ class Cmap(object):
 if not st.session_state.get("password_correct", False):
     st.stop()
 
+if 'colormap' not in st.session_state:
+    set_st('colormap', Cmap())
 # st.logo(st.session_state['logo'], size="large")
 # cols = st.columns([0.4, 0.2, 0.4])
 # with cols[1]:
 #     st.image(st.session_state['logo'], use_container_width=True)
-
-if 'temp_gpd_data' not in st.session_state:
-    st.session_state['temp_gpd_data'] = []
-
-if 'colormap' not in st.session_state:
-    st.session_state['colormap'] = Cmap()
-
-if 'layer_id' not in st.session_state:
-    st.session_state['layer_id'] = 0
 
 def random_letters(length):
     return ''.join(random.sample(string.ascii_lowercase,length))
@@ -297,7 +295,7 @@ def add_temp_layer(gpd_layer, query_dict):
             'style': generate_style_func(cmap, '', 0, desc_col_new),
             'highlight': generate_style_func(cmap, 'black', 1, desc_col_new)
         })
-        st.session_state['layer_id'] += 1
+        set_st('layer_id', st.session_state['layer_id'] + 1)
 
 def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", height=500, width=500):
     metadata = {
@@ -446,19 +444,23 @@ def push_layers_to_cdr(debug=True):
                         print(response.status_code, response.content)
                         st.info(str(response.status_code) + ' ' + str(response.content))
 
+def check_shapefile():
+    if not st.session_state['emb.shapefile']:
+        st.error("missing **Shape file**")
+        return False
+    elif not st.session_state['emb.desc_col']:
+        st.error("missing **Description column**")
+        return False
+    elif not st.session_state['emb.model']:
+        st.error("missing **Embedding model**")
+        return False
+    else:
+        st.info("Looks good!", icon=":material/thumb_up:")
+        return True
+
 
 @st.dialog("Prepare shapefile", width="large")
 def prepare_shapefile():
-    for key in ['emb.shapefile', 'emb.desc_col', 'emb.model']:
-        if not key in st.session_state:
-            st.session_state[key] = None
-
-    if not 'emb.area' in st.session_state:
-        st.session_state['emb.area'] = 'N/A'
-
-    if 'emb.shapefile.ok' not in st.session_state:
-        st.session_state['emb.shapefile.ok'] = False
-
     col1, col2, col2a, col2b = st.columns([0.4,0.4,0.1,0.1], vertical_alignment="bottom")
     with col1:
         sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
@@ -471,13 +473,16 @@ def prepare_shapefile():
         else:
             ind = polygons.index(st.session_state['emb.shapefile'])
 
-        polygon_file = st.selectbox(
+        # print('emb.shapefile', st.session_state['emb.shapefile'])
+        # print('ind', ind)
+
+        shapefile = st.selectbox(
             "Shape file",
             polygons,
-            index=ind,
+            index = ind,
             # label_visibility="collapsed",
-            key='emb.shapefile',
         )
+        set_st('emb.shapefile', shapefile)
         # if not polygon_file:
         #     st.warning("Please select a polygon file.")
     # if polygon_file:
@@ -492,13 +497,15 @@ def prepare_shapefile():
         # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
         boundary_files = ['N/A'] + os.listdir(st.session_state['download_dir_user_boundary'])
         ind = boundary_files.index(st.session_state['emb.area'])
-        boundary_file = st.selectbox(
+        # print('emb.area', st.session_state['emb.area'])
+        # print('ind', ind)
+        area = st.selectbox(
             "Boundary",
             boundary_files,
-            index=ind,
-            key='emb.area',
+            index = ind,
             # label_visibility='collapsed'
         )
+        set_st('emb.area', area)
 
     col_a, col_b = st.columns([0.5, 0.5], vertical_alignment="bottom")
 
@@ -508,54 +515,44 @@ def prepare_shapefile():
         else:
             columns = list(load_shape_file(
                 os.path.join(st.session_state['preproc_dir'], st.session_state['emb.shapefile'])).columns)
-            if 'full_desc' in columns:
-                st.session_state['emb.desc_col'] = 'full_desc'
-            
-        if not st.session_state['emb.desc_col']:
-            ind_c = None
-        else:
-            ind_c = columns.index(st.session_state["emb.desc_col"])
 
+        if 'full_desc' in columns:
+            ind = columns.index('full_desc')
+        else:
+            ind = None
+   
+        # if not st.session_state['emb.desc_col']:
+        #     ind_c = None
+        # else:
+        #     ind_c = columns.index(st.session_state["emb.desc_col"])
+        # print('emb.desc_col', st.session_state['emb.desc_col'])
+        # print('ind', ind)
         desc_col = st.selectbox(
             "Description column",
             columns,
-            index=ind_c,
-            key="emb.desc_col",
-            disabled=True,
+            index = ind,
+            disabled= True,
         )
+        set_st('emb.desc_col', desc_col)
         # if not desc_col:
         #     st.warning("Please select a description column")
 
     with col_b:
         models = ["iaross/cm_bert", "Alibaba-NLP/gte-large-en-v1.5"]
         if not st.session_state['emb.model']:
-            ind_c=None
+            ind=None
         else:
-            ind_c = models.index(st.session_state['emb.model'])
-
+            ind = models.index(st.session_state['emb.model'])
+        # print('emb.model', st.session_state['emb.model'])
+        # print('ind', ind)
         model_name = st.selectbox(
             "Embedding model",
             models,
-            index=ind_c,
-            key="emb.model"
+            index = ind,
         )
+        set_st('emb.model', model_name)
         # if not model_name:
         #     st.warning("Please select a model.")
-
-    def check_shapefile():
-        if not st.session_state['emb.shapefile']:
-            st.error("missing **Shape file**")
-            return False
-        elif not st.session_state['emb.desc_col']:
-            st.error("missing **Description column**")
-            return False
-        elif not st.session_state['emb.model']:
-            st.error("missing **Embedding model**")
-            return False
-        else:
-            st.info("Looks good!", icon=":material/thumb_up:")
-            return True
-        
     st.session_state['emb.shapefile.ok'] = check_shapefile()
             
 
