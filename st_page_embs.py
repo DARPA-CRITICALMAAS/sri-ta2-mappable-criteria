@@ -473,7 +473,7 @@ def prepare_shapefile():
     col1, col2, col2a, col2b = st.columns([0.4,0.4,0.1,0.1], vertical_alignment="bottom")
     with col1:
         sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
-        # ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
+        ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
         ta1_polygons = []
 
         polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons]
@@ -526,10 +526,10 @@ def prepare_shapefile():
             columns = list(load_shape_file(
                 os.path.join(st.session_state['preproc_dir'], st.session_state['emb.shapefile'])).columns)
 
-        if 'full_desc' in columns:
-            ind = columns.index('full_desc')
-        else:
-            ind = None
+        ind = None
+        for col in ['full_desc', 'description']:
+            if col in columns:
+                ind = columns.index(col)
    
         # if not st.session_state['emb.desc_col']:
         #     ind_c = None
