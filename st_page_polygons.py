@@ -12,7 +12,7 @@ import pandas as pd
 if not st.session_state.get("password_correct", False):
     st.stop()
 
-st.logo(st.session_state['logo'], size="large")
+# st.logo(st.session_state['logo'], size="large")
 
 
 download_dir_sgmc = st.session_state["download_dir_sgmc"]

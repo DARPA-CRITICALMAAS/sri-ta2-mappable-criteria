@@ -6,7 +6,7 @@ import json
 
 deposit_model_dir = st.session_state['deposit_model_dir']
 
-st.logo(st.session_state['logo'], size="large")
+# st.logo(st.session_state['logo'], size="large")
 
 def dict2df(dict, key_desc='characteristic', value_desc='description'):
     df = pd.DataFrame(
@@ -60,6 +60,7 @@ if not 'dep_model_in_edit' in st.session_state:
 option = st.selectbox(
     'choose a deposit model file',
     files,
+    index=None,
     key='dep_model_file',
     on_change=dep_model_file_on_change,
     disabled=st.session_state['dep_model_in_edit'],

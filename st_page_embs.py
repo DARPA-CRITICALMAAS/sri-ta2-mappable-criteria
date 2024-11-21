@@ -470,7 +470,7 @@ def check_shapefile():
 
 @st.dialog("Prepare shapefile", width="large")
 def prepare_shapefile():
-    col1, col2, col2a, col2b = st.columns([0.4,0.4,0.1,0.1], vertical_alignment="bottom")
+    col1, col2, col3 = st.columns([0.4,0.4,0.2], vertical_alignment="bottom")
     with col1:
         sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
         ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
@@ -499,9 +499,6 @@ def prepare_shapefile():
     # else:
     #     selected_polygon = None
 
-    # with col2:
-        # st.page_link("st_page_polygons.py", label="Create shape files", icon=":material/add:")
-        # pass
     with col2:
         # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
         boundary_files = ['N/A'] + os.listdir(st.session_state['download_dir_user_boundary'])
@@ -515,6 +512,9 @@ def prepare_shapefile():
             # label_visibility='collapsed'
         )
         set_st('emb.area', area)
+
+    with col3:
+        st.page_link("st_page_polygons.py", label="Create", icon=":material/add:")
 
     col_a, col_b = st.columns([0.5, 0.5], vertical_alignment="bottom")
 
@@ -609,7 +609,7 @@ def generate_new_layers():
 
     with tab2:
         # compute new layers
-        cola, colb, colc = st.columns([0.4, 0.4, 0.2])
+        cola, colb, colc = st.columns([0.4, 0.4, 0.2], vertical_alignment="center")
         with cola:
             files = [fname.replace('.json', '') for fname in os.listdir(st.session_state['deposit_model_dir']) if fname.endswith('.json')]
             files.sort()
@@ -636,8 +636,7 @@ def generate_new_layers():
                 # if not selected_dep_type:
                 #     st.warning("Please select a deposit type")
         with colc:
-            # st.page_link("st_page_dep_models.py", label="Edit deposit models", icon=":material/edit:")
-            pass
+            st.page_link("st_page_dep_models.py", label="Edit deposit models", icon=":material/edit:")
 
         if selected_dep_type:
             dep_model = dep_models[selected_dep_type]
