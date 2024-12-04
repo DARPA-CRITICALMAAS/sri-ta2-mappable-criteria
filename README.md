@@ -51,12 +51,13 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
         echo $! > streamlit_pid.txt
         ```
         *Note:*
+        -   *QueryPlot is built with streamlit and it runs on port `8501` by default*
         -   *The logs will be written to file `streamlit.log`*
         -   *The PID will be stored in `streamlit_pid.txt` for terminating the process in the future*
     
-    4. Access the tool in a browser
+3. Access QueryPlot in a browser
 
-        QueryPlot is built with streamlit and it runs on port `8501` by default. To access it, use the ip address of your EC2 instance and the port number (e.g., `http://your.ec2.ip.address:8501`)
+    To access it, open a browser and type in the ip address of your EC2 instance and the port number (e.g., `http://your.ec2.ip.address:8501`)
 
 ## Prepare polygon data
 Once the server has been set up and the service is running, download the preprocessed SGMC shape file into corresponding directory:
