@@ -1,9 +1,9 @@
 
 <p align="center">
-  <img width="460" src="images/logo.png">
+  <img width="300" src="images/logo.png">
 </p>
 
-# QueryPlot - Generating mineral evidence layers from geological queries
+# QueryPlot - Generating mineral evidence maps from geological queries
 This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program. QueryPlot uses transformer encoder to extract sentence embeddings from polygon descriptions and compare them with a user query embedding to find the top relevant polygons. A user can use either custom query or pre-defined descriptive deposit models to search polygons and download the result layers for further processing in local GIS software.
 
 ## System setup (on AWS)
