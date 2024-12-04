@@ -20,18 +20,18 @@ networkx==3.2.1
 ipdb==0.13.13
 matplotlib==3.8.4
 pytablewriter==1.2.0
-requests
-mapbox-vector-tile 
-httpx
-gooey
+requests>=2.31.0
+mapbox-vector-tile==2.1.0
+httpx>=2.27.0
+gooey==1.0.8.1
 gdal>=3.6.2
-fiona
-rasterio
+fiona==1.10.1
+rasterio==1.4.2
 # python -m spacy download en_core_web_sm
 # python -m spacy download en_core_web_lg
 # brew install freetype imagemagick
 streamlit==1.40.1
-leafmap
-xarray
-localtileserver
+leafmap>=0.39.2
+xarray==2024.9.0
+localtileserver>=0.10.5
 streamlit-folium==0.23.1
