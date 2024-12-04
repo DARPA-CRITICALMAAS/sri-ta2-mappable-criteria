@@ -1,4 +1,4 @@
-# Evidence Layer Synthesis for Critical Mineral Prospectivity
+# (Obsolete) Evidence Layer Synthesis for Critical Mineral Prospectivity
 
 ## Download SGMC data
 SGMC data can be accessed through [this link](https://www.sciencebase.gov/catalog/item/5888bf4fe4b05ccb964bab9d). The attached files specifically needed for this tool are:
