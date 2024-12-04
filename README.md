@@ -8,7 +8,8 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
 
 ## System setup (on AWS)
 1. Create an EC2 instance and connect to it through console
-    
+    -   Amazon Machine Image (AMI)
+        -   Ubuntu Server 24.04 LTS
     -   System spec (recommend m8g.2xlarge equivalent or higher)
         -   CPU: 2.3 GHz
         -   Number of (v)CPUs: 8
@@ -22,7 +23,7 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
     ```bash
     bash setup_aws.sh
     ```
-    what this script does:
+    This script will do the following things:
 
     1. Install dependencies
         ```bash
@@ -49,7 +50,7 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
         pip install -r polygon_ranking/requirements.txt
         ```
 
-    3. Start server
+    3. Start service
         ```bash
         source /home/ubuntu/venvs/sri-map-synth/bin/activate
         nohup streamlit run Welcome.py > streamlit.log 2>&1 & 
