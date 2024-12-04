@@ -1,8 +1,18 @@
 # QueryPlot - Generating mineral evidence layers from geological queries
-This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program.
+This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program. QueryPlot uses transformer encoder to extract sentence embeddings from polygon descriptions and compare them with a user query embedding to find the top relevant polygons. A user can use either custom query or pre-defined descriptive deposit models to search polygons and download the result layers for further processing in local GIS software.
 
 ## System setup (on AWS)
 1. Create an EC2 instance and connect to it through console
+    
+    -   System spec (recommend m8g.2xlarge equivalent or higher)
+        -   CPU: 2.3 GHz
+        -   Number of (v)CPUs: 8
+        -   Memory: 32 GiB
+        -   Storage: 200 GiB
+        -   GPU: not required
+    -   Security Groups setting
+        -   add type `Custom TCP` on port `8501` to `Inbound rules`
+
 2. Simply run the setup script
     ```bash
     bash setup_aws.sh
@@ -45,6 +55,7 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
         -   *The PID will be stored in `streamlit_pid.txt` for terminating the process in the future*
     
     4. Access the tool in a browser
+
         QueryPlot is built with streamlit and it runs on port `8501` by default. To access it, use the ip address of your EC2 instance and the port number (e.g., `http://your.ec2.ip.address:8501`)
 
 ## Prepare polygon data
@@ -55,5 +66,5 @@ wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/SGMC_preproc_defaul
 ```
 Alternatively, you could also create the shapefile from scratch within QueryPlot by following the `How to create your own shapefile` section in the [user manual](https://docs.google.com/document/d/1WTDQBVn73pqW3YsGDRtNmBFUjEyRdCFV)
 
-## Use QueryPlot to generate evidence map layers
-Follow the instructions in [user manual](https://docs.google.com/document/d/1WTDQBVn73pqW3YsGDRtNmBFUjEyRdCFV) or watch an 8-minute [video](https://drive.google.com/file/d/1eSYXvgU6Voj8XXoXC2xKEyTE8t9aZun6) to learn how to use QueryPlot.
+## Generate evidence map layers
+Follow the instructions in [user manual](https://docs.google.com/document/d/1WTDQBVn73pqW3YsGDRtNmBFUjEyRdCFV) or watch this 8-minute [video](https://drive.google.com/file/d/1eSYXvgU6Voj8XXoXC2xKEyTE8t9aZun6) to learn how to use QueryPlot.
