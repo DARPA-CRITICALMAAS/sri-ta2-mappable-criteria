@@ -5,10 +5,37 @@ import json
 
 import io
 import numpy as np
+import tempfile
 import rasterio
-from rasterio.features import rasterize
 from rasterio.io import MemoryFile
+from rasterio.transform import from_origin
+from rasterio.features import rasterize
+from rasterio.mask import mask
+from rasterio.warp import calculate_default_transform, reproject, Resampling
 from rasterio.transform import from_bounds
+
+
+def get_cmas(cdr_key, size=100):
+    url = 'https://api.cdr.land/v1/prospectivity/cmas'
+    headers = {
+        'accept': 'application/json',
+        'Authorization': f'Bearer {cdr_key}',
+    }
+    page = 0
+    all_response = []
+    while True:
+        params = {
+            'page': str(page),
+            'size': str(size),
+        }
+        response = requests.get(url, params=params, headers=headers)
+        page += 1
+        if response.status_code == 200 and len(response.json()) > 0:
+            all_response.extend(response.json())
+        else:
+            break
+    return all_response
+
 
 
 def get_ftype(fname):
@@ -44,17 +71,20 @@ def push_to_cdr(cdr_key, metadata, filepath=None, content=None):
     return response
 
 
-def raster_and_push(gdf_original, col, metadata, cdr_key, pixel_size=500, dry_run=True, crs="ESRI:102008", fill_nodata=-10e9):
-    # Define the raster dimensions and resolution
-    gdf = gdf_original.copy().to_crs(crs)
-    minx, miny, maxx, maxy = gdf.total_bounds
-    extent = [minx, miny, maxx, maxy]
+def raster_and_push(gdf_original, col, boundary=None, metadata=None, cdr_key=None, outpath=None, pixel_size=500, dry_run=True, crs="ESRI:102008", fill_nodata=-10e9):
 
-    # Define the transformation (maps pixel coordinates to geographic coordinates)
+    # 1. reproject vector data
+    gdf = gdf_original.to_crs(crs)
+    boundary = boundary.to_crs(crs)
+
+    minx, miny, maxx, maxy = boundary.total_bounds
+    extent = [minx, miny, maxx, maxy]
+    print('boundary extent', extent)
+
+    # 2. Rasterize vector data
     transform = from_bounds(*extent, width=int((extent[2] - extent[0]) / pixel_size), height=int((extent[3] - extent[1]) / pixel_size))
     out_shape = (int((extent[3] - extent[1]) / pixel_size), int((extent[2] - extent[0]) / pixel_size))
 
-    # Rasterize the GeoDataFrame geometries
     raster = rasterize(
         ((geom, value) for geom, value in zip(gdf.geometry, gdf[col])),
         out_shape=out_shape,
@@ -62,47 +92,75 @@ def raster_and_push(gdf_original, col, metadata, cdr_key, pixel_size=500, dry_ru
         fill=fill_nodata,
         dtype='float32'
     )
+    raster = np.where(raster > 0, raster, 0)
+    print('raster shape', raster.shape)
 
-    fname = f"{col}.tif"
-    if dry_run:
+    out_tif = f'{col}.tif'
+
+    # Save the rasterized image temporarily
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_raster = os.path.join(tmpdir, out_tif.replace('.tif', '.temp.tif'))
         with rasterio.open(
-            fname, 'w',
-            driver='GTiff',
-            height=raster.shape[0], width=raster.shape[1],
-            count=1, dtype='float32',
-            crs=crs,
-            transform=transform,
-            nodata=fill_nodata) as dst:
+                temp_raster, 'w',
+                driver='GTiff',
+                height=raster.shape[0], width=raster.shape[1],
+                count=1, dtype='float32',
+                crs=crs,
+                transform=transform,
+                nodata=fill_nodata) as dst:
             dst.write(raster, 1)
-        with open(fname.replace('.tif', '.json'), 'w') as f:
-            json.dump(metadata, f)
-    else:
-        # Write the raster to an in-memory GeoTIFF
-        with MemoryFile() as memfile:
-            with memfile.open(
-                driver="GTiff",
-                height=raster.shape[0],
-                width=raster.shape[1],
-                count=1,
-                dtype=raster.dtype,
-                crs=gdf.crs,
-                transform=transform
-            ) as dataset:
-                dataset.write(raster, 1)
 
-            # Prepare the data for posting
-            memfile.seek(0)
-            file_content = io.BytesIO(memfile.read())
+        # 3. Warp and clip the raster
+        with rasterio.open(temp_raster) as src:
+            # Mask the raster using the cutline
+            out_image, out_transform = mask(src, boundary.geometry, crop=True, nodata=fill_nodata)
+            out_image = out_image[0]
+            print('out_image shape', out_image.shape)
+            # Update metadata after clipping
+            out_meta = src.meta.copy()
+            out_meta.update({
+                "driver": "GTiff",
+                "height": out_image.shape[0],
+                "width": out_image.shape[1],
+                "transform": out_transform,
+                "nodata": fill_nodata
+            })
 
-            response = push_to_cdr(cdr_key, metadata, filepath=None, content=file_content, fname=fname)
+        # Write the masked (clipped) raster to a new file
+        if dry_run and outpath:
+            with rasterio.open(os.path.join(outpath, out_tif), "w", **out_meta) as dst:
+                dst.write(out_image, 1)
+
+            print('raster saved to: ', os.path.join(outpath, out_tif))
+        else:
+            # with rasterio.open(temp_raster.replace('.temp.tif', '.tif'), "w", **out_meta) as dst:
+            #     dst.write(out_image)
+
+            # Write the raster to an in-memory GeoTIFF
+            with MemoryFile() as memfile:
+                with memfile.open(
+                    driver="GTiff",
+                    height=out_image.shape[0],
+                    width=out_image.shape[1],
+                    count=1,
+                    dtype=out_image.dtype,
+                    crs=crs,
+                    transform=out_transform,
+                    nodata = fill_nodata,
+                ) as dataset:
+                    dataset.write(out_image, 1)
+
+                # Prepare the data for posting
+                memfile.seek(0)
+                file_content = io.BytesIO(memfile.read())
+                response = push_to_cdr(cdr_key, metadata, filepath=out_tif, content=file_content)
         
             # # Check the response
-            # if response.status_code == 200:
-            #     print("Raster successfully posted!")
-            # else:
-            #     print("Failed to post raster:", response.status_code, response.text)
-        
-        return response
+            if response.status_code == 200:
+                print("Raster successfully posted!")
+            else:
+                print("Failed to post raster:", response.status_code, response.text)
+            return response
 
 
 if __name__=='__main__':
