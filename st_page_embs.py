@@ -17,10 +17,11 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 import leafmap.foliumap as leafmap
-from polygon_ranking.cdr_push import push_to_cdr, raster_and_push
+from polygon_ranking.cdr_push import get_cmas, push_to_cdr, raster_and_push
 from polygon_ranking.polygon_ranking import convert_text_to_vector_hf, rank_polygon_single_query, rank, nullable_string
 from sentence_transformers import SentenceTransformer
 from branca.colormap import linear
+from shapely.geometry import shape
 
 
 st.markdown("""
@@ -105,10 +106,28 @@ def shape_file_overlay(selected_polygon, desc_col, model_name, boundary_file):
     data_ = data.copy()
     data_['embeddings'] = list(vec)
 
-    area = load_shape_file(os.path.join(
-        st.session_state['download_dir_user_boundary'],
-        boundary_file
-    )).to_crs(data_.crs)
+    if '[CDR]' in boundary_file:
+        cma = None
+        for item in st.session_state['cmas']:
+            if item['description'] == boundary_file.replace('[CDR]', ''):
+                cma = item
+                break
+        if not cma:
+            return data, vec
+        else:
+            area = gpd.GeoDataFrame(
+                {
+                    'description': [cma['description']],
+                    'mineral': [cma['mineral']],
+                },
+                geometry=[shape(item['extent'])],
+                crs=item['crs'],
+            ).to_crs(data_.crs)
+    else:
+        area = load_shape_file(os.path.join(
+            st.session_state['download_dir_user_boundary'],
+            boundary_file
+        )).to_crs(data_.crs)
 
     cols = data_.columns
     data_ = data_.overlay(area, how="intersection")[cols]
@@ -160,8 +179,11 @@ def generate_slider_on_change(slider_key, layer_name):
         th_min, th_max = st.session_state[slider_key]
         for item in st.session_state['temp_gpd_data']:
             if item['name'] == layer_name:
+                # print(item['name'], th_min, th_max, item['data'][layer_name].min(), item['data'][layer_name].max())
+                temp_min = np.percentile(item['orig_values'], th_min)
+                temp_max = np.percentile(item['orig_values'], th_max)
                 item['data_filtered'] = item['data'][
-                    item['data'][layer_name].between(th_min, th_max)
+                    item['data'][layer_name].between(temp_min, temp_max)
                 ]
     return slider_on_change
 
@@ -276,8 +298,8 @@ def get_zip_shp_multiple(gdfs, names, descriptions):
     return zip_buffer
 
 
-def add_temp_layer(gpd_layer, query_dict):
-    gpd_layer = gpd_layer.to_crs('ESRI:102008')
+def add_temp_layer(gpd_layer, query_dict, th_min=None, th_default=None, th_max=None):
+    gpd_layer = gpd_layer
 
     for desc_col, desc in query_dict.items():
         existing_layers = [item['name'] for item in st.session_state['temp_gpd_data']]
@@ -289,21 +311,46 @@ def add_temp_layer(gpd_layer, query_dict):
             i+=1
         # cols_to_del = list(query_dict.keys())
         # cols_to_del.remove(desc_col)
-        layer_temp = gpd_layer.copy()
+        layer_temp = gpd_layer.copy().to_crs('ESRI:102008')
 
         layer_temp.rename(columns={desc_col: desc_col_new}, inplace=True)
         # layer_temp.drop(columns=cols_to_del, inplace=True)
-        layer_temp = layer_temp[layer_temp[desc_col_new] > st.session_state['threshold_min']]
+
+        orig_values = layer_temp[desc_col_new]
+
+        if th_min is None:
+            th_min = st.session_state['threshold_min']
+        if th_max is None:
+            th_max  = 100
+        if th_default is None:
+            th_default = st.session_state['threshold_default']
+
+        min_ = np.percentile(orig_values, th_min)
+        default_ = np.percentile(orig_values, th_default)
+        max_ = np.percentile(orig_values, th_max)
+
+        layer_temp = layer_temp[
+            layer_temp[desc_col_new].between(min_, max_)
+        ]
+        
+        layer_temp_filtered = layer_temp[
+            layer_temp[desc_col_new].between(default_, max_)
+        ]
         cmap = st.session_state['colormap'].next()
         st.session_state['temp_gpd_data'].append({
             'id': st.session_state['layer_id'],
             'name': desc_col_new,
             'desc': desc,
             'data': layer_temp,
-            'data_filtered': layer_temp[layer_temp[desc_col_new] > st.session_state['threshold_default']],
+            'orig_values': orig_values,
+            'th_min': th_min,
+            'th_default': th_default,
+            'th_max': th_max,
+            'data_filtered': layer_temp_filtered,
             'style': generate_style_func(cmap, '', 0, desc_col_new),
             'highlight': generate_style_func(cmap, 'black', 1, desc_col_new)
         })
+        # print(f'added new layer: {desc_col_new}')
         set_st('layer_id', st.session_state['layer_id'] + 1)
 
 def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", height=500, width=500):
@@ -312,13 +359,13 @@ def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", heigh
         "authors": [desc],
         "publication_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "category": "geology",
-        "subcategory": f"SRI text embedding layers - {sysver}",
+        "subcategory": f"SRI QueryPlot - {sysver}",
         "description": f"{cma_no}-{deposit_type}-{layer}",
         "derivative_ops": "none",
         "type": "continuous",
         "resolution": [str(height), str(width)],
         "format": ftype,
-        "evidence_layer_raster_prefix": f"sri-txtemb-{sysver}_{cma_no}_{deposit_type}_{layer}",
+        "evidence_layer_raster_prefix": f"SRI-QueryPlot-{sysver}_{cma_no}_{deposit_type}_{layer}",
         "download_url": "none",
     }
     return metadata
@@ -423,8 +470,24 @@ def push_layers_to_cdr(debug=True):
         st.error("There are no text embedding layers generated yet.")
         return
     
+    st.write([item['name'] for item in st.session_state['temp_gpd_data']])
+    fmt = st.radio(
+        "format",
+        ['.tiff', '.shp'],
+        disabled=True,
+        horizontal=True,
+        label_visibility='collapsed'
+    )
+    cma_no = st.text_input(
+        "tag",
+        value=None,
+        max_chars=32,
+        placeholder="create a unique tag to differentiate these layers from existing layers",
+    )
+
     cdr_key = st.text_input("Your CDR key:", type="password")
     st.write("Click the button below to push:")
+
     if st.button("", key="emb.push_to_cdr", icon=":material/cloud_upload:"):
         if not cdr_key:
             st.error("CDR key is empty.")
@@ -435,7 +498,13 @@ def push_layers_to_cdr(debug=True):
                     desc = item['desc']
                     layer = item['data_filtered'].rename(columns={col_name: 'query_sim'}) # Ten-character limitation to Shapefile attributes
 
-                    metadata = make_metadata(col_name, "zip", st.session_state['emb.dep_type'], desc, "15month_test", sysver="v1.2")             
+                    metadata = make_metadata(
+                        layer=col_name,
+                        ftype="zip",
+                        deposit_type=st.session_state['emb.dep_type'],
+                        desc=desc,
+                        cma_no=cma_no,
+                        sysver="v1.2")    
                     content = get_zip_shp(layer, col_name, add_meta=desc)
 
                     if debug:
@@ -449,7 +518,19 @@ def push_layers_to_cdr(debug=True):
                             icon=":material/download:"
                         )
                     else:
-                        response = push_to_cdr(cdr_key, metadata, filepath=col_name+".zip", content=content)
+                        if fmt == '.shp':
+                            metadata['format'] = 'shp'
+                            response = push_to_cdr(cdr_key, metadata, filepath=col_name+".zip", content=content)
+                        elif fmt == '.tiff':
+                            metadata['format'] = 'tif'
+                            response = raster_and_push(
+                                layer,
+                                col='query_sim',
+                                boundary=load_shape_file(os.path.join(st.session_state['download_dir_user_boundary'], st.session_state['emb.area'])),
+                                metadata=metadata,
+                                cdr_key=cdr_key,
+                                dry_run=False
+                            )
                         print(response.status_code, response.content)
                         st.info(str(response.status_code) + ' ' + str(response.content))
 
@@ -501,7 +582,13 @@ def prepare_shapefile():
 
     with col2:
         # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
-        boundary_files = ['N/A'] + os.listdir(st.session_state['download_dir_user_boundary'])
+        if 'cmas' not in st.session_state:
+            st.session_state['cmas'] = get_cmas(cdr_key = st.secrets['cdr_key'])
+
+        boundary_files = ['N/A'] \
+            + os.listdir(st.session_state['download_dir_user_boundary']) \
+            + ['[CDR]' + item['description'] for item in st.session_state['cmas']]
+        
         ind = boundary_files.index(st.session_state['emb.area'])
         # print('emb.area', st.session_state['emb.area'])
         # print('ind', ind)
@@ -688,6 +775,86 @@ def generate_new_layers():
                 add_temp_layer(gpd_data, query_dict=temp_dep_model)
                 st.rerun()
 
+
+@st.dialog("Find contact", width="large")
+def find_contact():
+
+    layer1 = st.selectbox(
+        "layer1",
+        [item['name'] for item in st.session_state['temp_gpd_data']],
+        placeholder="layer1",
+        label_visibility="collapsed",
+    )
+    layer2 = st.selectbox(
+        "layer2",
+        [item['name'] for item in st.session_state['temp_gpd_data']],
+        placeholder="layer2",
+        label_visibility="collapsed",
+    )
+
+    buffer1 = st.text_input(
+        "buffer1",
+        50,
+    )
+    buffer1 = int(buffer1)
+
+    buffer2 = st.text_input(
+        "buffer2",
+        3000,
+    )
+    buffer2 = int(buffer2)
+
+    if st.button("", icon=":material/join_inner:"):
+        if (not layer1) or (not layer2):
+            st.error("Please select the two layers")
+        elif layer1 == layer2:
+            st.error("Two layers cannot be the same")
+        elif not buffer1:
+            st.error("Please provide a value for 'buffer1'")
+        else:
+            for item in st.session_state['temp_gpd_data']:
+                if item['name'] == layer1:
+                    item1 = item
+                elif item['name'] == layer2:
+                    item2 = item
+                else:
+                    pass
+            
+            # import ipdb; ipdb.set_trace()
+            b1 = gpd.GeoDataFrame(item1['data_filtered'], geometry=item1['data_filtered'].buffer(buffer1))
+            b2 = gpd.GeoDataFrame(item2['data_filtered'], geometry=item2['data_filtered'].buffer(buffer1))
+
+            int_layer = gpd.overlay(b1, b2, how='intersection')
+            int_layer = gpd.GeoDataFrame(int_layer, geometry=int_layer.buffer(buffer2))
+            int_layer['contact'] = int_layer[item1['name']+'_1'] * int_layer[item2['name']+'_2']
+            # int_layer.drop(columns=[item1['name'], item2['name']], inplace=True)
+            add_temp_layer(
+                int_layer,
+                {'contact': f"contact of {item1['name']} and {item2['name']}"},
+                th_min=0, th_default=50, th_max=100
+            )
+            # int_layer.to_file(os.path.join(st.session_state['tmp_dir'], 'contact.shp'))
+
+
+            # temp_layers = []
+            # for i, key in enumerate(layers.keys()):
+            #     temp_ = data[data[key] > layers[key]]
+
+            #     temp_ = gpd.GeoDataFrame(temp_, geometry=temp_.buffer(buffer1))
+            #     temp_ = temp_.rename(columns=lambda col: f"{col}_{i}" if col != 'geometry' else col)
+
+            #     temp_layers.append(temp_)
+
+            # result = temp_layers[0]
+            # for temp_ in temp_layers[1:]:
+            #     result = gpd.overlay(result, temp_,  how="intersection")
+
+            # if buffer2:
+            #     result = result.buffer(buffer2)
+
+            st.rerun()
+
+
 @st.fragment
 def show_layers():
     for ind, item in enumerate(st.session_state['temp_gpd_data']):
@@ -703,9 +870,10 @@ def show_layers():
             slider_key = f"emb.slider.{item['id']}"
             st.slider(
                 item['name'],
-                min_value = st.session_state['threshold_min'],
-                max_value = 1.0,
-                value = (st.session_state['threshold_default'], 1.0),
+                min_value = item['th_min'],
+                max_value = item['th_max'],
+                value = (item['th_default'], item['th_max']),
+                format="%d %%",
                 key=slider_key,
                 on_change=generate_slider_on_change(slider_key, item['name']),
                 label_visibility='collapsed'
@@ -781,10 +949,20 @@ def show_layers():
 
         fgroups = []
         for item in st.session_state['temp_gpd_data']:
+            # print(f'drawing layer {item["name"]}')
+            # print(item['data_filtered'].columns)
             fg = folium.FeatureGroup(name=item['name'])
+            # tooltip = folium.GeoJsonTooltip(
+            #     fields=[st.session_state['emb.desc_col'], item['name']],
+            #     aliases=["description", f"query_sim ({item['name']})"],
+            #     localize=True,
+            #     sticky=True,
+            #     labels=True,
+            #     max_width=100,
+            # )
             tooltip = folium.GeoJsonTooltip(
-                fields=[st.session_state['emb.desc_col'], item['name']],
-                aliases=["description", f"query_sim ({item['name']})"],
+                fields=[item['name']],
+                aliases=[f"query_sim ({item['name']})"],
                 localize=True,
                 sticky=True,
                 labels=True,
@@ -826,12 +1004,15 @@ def show_buttons():
 
     if st.button("", icon=":material/save_as:", help="Save boundary", type="secondary"):
         save_drawings()
+    
+    if st.button("", icon=":material/join_inner:", help="Find contact", type="secondary"):
+        find_contact()
 
     if st.button("", icon=":material/download:", help="Download layers", type="primary"):
         download_layers()
 
     if st.button("", icon=":material/cloud_upload:", help="Push layers to CDR", type="primary"):
-        push_layers_to_cdr()
+        push_layers_to_cdr(debug=False)
 
 
 col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
