@@ -8,13 +8,13 @@ sudo apt-get install unzip
 export CPLUS_INCLUDE_PATH=/usr/include/gdal
 export C_INCLUDE_PATH=/usr/include/gdal
 
-mkdir app
-cd app
-git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git
-cd sri-ta2-mappable-criteria/
+# mkdir app
+# cd app
+# git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git
+# cd sri-ta2-mappable-criteria/
 python3 -m venv /home/ubuntu/venvs/sri-map-synth
 source /home/ubuntu/venvs/sri-map-synth/bin/activate
 pip install GDAL==`gdal-config --version`
 pip install -r polygon_ranking/requirements.txt
 
-bash start_server.sh
+# bash start_server.sh

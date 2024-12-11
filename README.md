@@ -19,7 +19,24 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
     -   Security Groups setting
         -   add type `Custom TCP` on port `8501` to `Inbound rules`
 
-2. Simply run the setup script
+2.  Pull code
+    ```bash
+    mkdir /home/ubuntu/app
+    cd /home/ubuntu/app
+    git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git
+    cd sri-ta2-mappable-criteria/
+    ```
+
+3. Secrets
+    ```bash
+    cat > .streamlit/secrets.toml << EOF
+    password = "<Create a password>"
+    cdr_key = "<Your CDR Key>"
+    openai_key = "<Your OpenAI Key>"  # This is optional
+    EOF
+    ```
+
+4. Setup environment
     ```bash
     bash setup_aws.sh
     ```
@@ -40,30 +57,30 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
 
     2. Prepare python environment
         ```bash
-        mkdir app
-        cd app
-        git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git
-        cd sri-ta2-mappable-criteria/
         python3 -m venv /home/ubuntu/venvs/sri-map-synth
         source /home/ubuntu/venvs/sri-map-synth/bin/activate
         pip install GDAL==`gdal-config --version`
         pip install -r polygon_ranking/requirements.txt
         ```
 
-    3. Start service
-        ```bash
-        source /home/ubuntu/venvs/sri-map-synth/bin/activate
-        nohup streamlit run Welcome.py > streamlit.log 2>&1 & 
-        echo $! > streamlit_pid.txt
-        ```
-        *Note:*
-        -   *QueryPlot is built with streamlit and it runs on port `8501` by default*
-        -   *The logs will be written to file `streamlit.log`*
-        -   *The PID will be stored in `streamlit_pid.txt` for terminating the process in the future*
+5. Start service
+    ```bash
+    bash start_server.sh
+    ```
+    *Note:*
+    -   *QueryPlot is built with streamlit and it runs on port `8501` by default*
+    -   *The logs will be written to file `streamlit.log`*
+    -   *The PID will be stored in `streamlit_pid.txt` for terminating the process in the future*
     
-3. Access QueryPlot in a browser
+6. Access QueryPlot in a browser
 
     To access it, open a browser and type in the ip address of your EC2 instance and the port number (e.g., `http://your.ec2.ip.address:8501`)
+
+
+## Docker image
+- Build docker image
+
+- Docker run
 
 ## Prepare polygon data
 Once the server has been set up and the service is running, download the preprocessed SGMC shape file into corresponding directory:
