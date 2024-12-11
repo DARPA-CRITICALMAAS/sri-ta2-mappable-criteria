@@ -1,0 +1,6 @@
+[paths]
+data_dir = '../workdir-data'
+
+[params]
+percentile_threshold_min = 80
+percentile_threshold_default = 90

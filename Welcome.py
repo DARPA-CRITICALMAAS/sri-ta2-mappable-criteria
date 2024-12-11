@@ -2,6 +2,7 @@ import streamlit as st
 import geopandas as gpd
 import pandas as pd
 import os
+import toml
 
 import hmac
 
@@ -51,16 +52,18 @@ mkdirs = []
 
 # workdir = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/sri-ta2-mappable-criteria"
 # workdir_output = "/Users/e32648/Documents/CriticalMAAS/12-month_hack/mac_install/output"
+with open('config.toml', 'r') as f:
+    user_cfg = toml.load(f)
 
-workdir = "./"
-workdir_output = "../workdir-data"
+workdir = './'
+datadir = user_cfg['paths']['data_dir']
 
-mkdirs.extend([workdir, workdir_output])
+mkdirs.extend([workdir, datadir])
 st.session_state['workdir'] = workdir
-st.session_state['workdir_output'] = workdir_output
+st.session_state['datadir'] = datadir
 
 # download dirs
-download_dir = os.path.join(workdir_output, "download")
+download_dir = os.path.join(st.session_state['datadir'], "download")
 download_dir_sgmc = os.path.join(download_dir, "sgmc")
 download_dir_ta1 = os.path.join(download_dir, "ta1")
 download_dir_user = os.path.join(download_dir, "user")
@@ -73,7 +76,7 @@ st.session_state['download_dir_user'] = download_dir_user
 st.session_state['download_dir_user_boundary'] = download_dir_user_boundary
 
 # preproc dirs
-preproc_dir = os.path.join(workdir_output, "preproc")
+preproc_dir = os.path.join(st.session_state['datadir'], "preproc")
 preproc_dir_sgmc = os.path.join(preproc_dir, "sgmc")
 preproc_dir_ta1 = os.path.join(preproc_dir, "ta1")
 mkdirs.extend([preproc_dir, preproc_dir_sgmc, preproc_dir_ta1])
@@ -82,12 +85,12 @@ st.session_state['preproc_dir_sgmc'] = preproc_dir_sgmc
 st.session_state['preproc_dir_ta1'] = preproc_dir_ta1
 
 # output dirs
-output_dir_layers = os.path.join(workdir_output, 'text_emb_layers')
+output_dir_layers = os.path.join(st.session_state['datadir'], 'text_emb_layers')
 mkdirs.extend([output_dir_layers])
 st.session_state['text_emb_layers'] = output_dir_layers
 
 # temp dirs
-tmp_dir = os.path.join(workdir_output, "temp")
+tmp_dir = os.path.join(st.session_state['datadir'], "temp")
 mkdirs.extend([tmp_dir])
 st.session_state['tmp_dir'] = tmp_dir
 
@@ -96,8 +99,8 @@ for dir in mkdirs:
     os.makedirs(dir, exist_ok=True)
 
 # src dirs
-deposit_model_dir = os.path.join(workdir, "polygon_ranking", "deposit_models")
-boundaries_dir = os.path.join(workdir, 'polygon_ranking', 'boundaries')
+deposit_model_dir = os.path.join(st.session_state['workdir'], "polygon_ranking", "deposit_models")
+boundaries_dir = os.path.join(st.session_state['workdir'], 'polygon_ranking', 'boundaries')
 st.session_state['deposit_model_dir'] = deposit_model_dir
 st.session_state['boundaries_dir'] = boundaries_dir
 
@@ -133,8 +136,8 @@ if 'temp_gpd_data' not in st.session_state:
 if 'layer_id' not in st.session_state:
     st.session_state['layer_id'] = 0
 
-st.session_state['threshold_min'] = 0.8
-st.session_state['threshold_default']=0.9
+st.session_state['threshold_min'] = user_cfg['params']['percentile_threshold_min']
+st.session_state['threshold_default'] = user_cfg['params']['percentile_threshold_default']
 
 
 
