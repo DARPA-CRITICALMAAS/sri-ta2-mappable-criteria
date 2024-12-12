@@ -13,6 +13,18 @@ RUN apt-get install -y \
 RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal
 RUN export C_INCLUDE_PATH=/usr/include/gdal
 
+# >>> start USGS DOI SSL
+COPY DOIRootCA2.crt /usr/local/share/ca-certificates
+RUN chmod 644 /usr/local/share/ca-certificates/DOIRootCA2.crt && \
+    update-ca-certificates
+# you probably don't need all of these, but they don't hurt 
+ENV PIP_CERT="/etc/ssl/certs/ca-certificates.crt" \
+    SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt" \
+    CURL_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt" \
+    REQUESTS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt" \
+    AWS_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt"
+# <<< end USGS DOI SSL
+
 WORKDIR /home/ubuntu/app/sri-ta2-mappable-criteria
 COPY . .
 
