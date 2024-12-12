@@ -47,10 +47,12 @@ else
             install_docker
             ;;
         [Nn]* )
-            echo "Skipping Docker installation."
+            echo "Docker is required to proceed. Exiting script."
+            exit 1
             ;;
         * )
-            echo "Invalid response. Skipping Docker installation."
+            echo "Invalid response. Exiting script."
+            exit 1
             ;;
     esac
 fi
@@ -62,12 +64,12 @@ sudo docker pull mye1225/cmaas-sri-queryplot:1.2
 # data artifacts and config
 echo "Downloading data artifacts"
 echo "[Shapefile] SGMC_preproc_default.gpkg ..."
-mkdir -p workdir-data/preproc/sgmc
+mkdir -p $HOME/app/workdir-data/preproc/sgmc
 wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/SGMC_preproc_default.gpkg
 mv SGMC_preproc_default.gpkg $HOME/app/workdir-data/preproc/sgmc/
 
 echo "[Deposit model] _Default_.json ..."
-mkdir -p workdir-data/deposit_models
+mkdir -p $HOME/app/workdir-data/deposit_models
 wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/_Default_.json
 mv _Default_.json $HOME/app/workdir-data/deposit_models
 
