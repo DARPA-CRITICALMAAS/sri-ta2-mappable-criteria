@@ -63,10 +63,13 @@ sudo docker pull mye1225/cmaas-sri-queryplot:1.2
 echo "Downloading data artifacts"
 echo "[Shapefile] SGMC_preproc_default.gpkg ..."
 mkdir -p workdir-data/preproc/sgmc
-wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/SGMC_preproc_default.gpkg && mv SGMC_preproc_default.gpkg workdir-data/preproc/sgmc/
+wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/SGMC_preproc_default.gpkg
+mv SGMC_preproc_default.gpkg $HOME/app/workdir-data/preproc/sgmc/
+
 echo "[Deposit model] _Default_.json ..."
 mkdir -p workdir-data/deposit_models
-wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/_Default_.json && mv _Default_.json workdir-data/deposit_models
+wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/_Default_.json
+mv _Default_.json $HOME/app/workdir-data/deposit_models
 
 # envs
 echo "Creating 'secrets.toml'"
@@ -81,8 +84,8 @@ echo "Docker run"
 sudo docker run \
     --rm \
     -it \
-    -v /home/ubuntu/secrets.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/.streamlit/secrets.toml \
-    -v /home/ubuntu/workdir-data:/home/ubuntu/app/workdir-data \
+    -v $HOME/app/secrets.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/.streamlit/secrets.toml \
+    -v $HOME/app/workdir-data:/home/ubuntu/app/workdir-data \
     -p 8501:8501 \
     mye1225/cmaas-sri-queryplot:1.2
 
