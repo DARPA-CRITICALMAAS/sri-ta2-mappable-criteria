@@ -720,18 +720,23 @@ def generate_new_layers():
                 selected_dep_model_file = os.path.join(st.session_state['deposit_model_dir'], dep_model_file+'.json')
                 with open(selected_dep_model_file, 'r') as f:
                     dep_models = json.load(f)
+            else:
+                dep_models = {}
 
-                selected_dep_type = st.selectbox(
-                    "select deposit type",
-                    list(dep_models.keys()),
-                    index=None,
-                    label_visibility="collapsed",
-                    key='emb.dep_type'
-                )
-                # if not selected_dep_type:
-                #     st.warning("Please select a deposit type")
+            selected_dep_type = st.selectbox(
+                "select deposit type",
+                list(dep_models.keys()),
+                index=None,
+                label_visibility="collapsed",
+                key='emb.dep_type'
+            )
+            # if not selected_dep_type:
+            #     st.warning("Please select a deposit type")
         with colc:
             st.page_link("st_page_dep_models.py", label="Edit deposit models", icon=":material/edit:")
+        
+        if not dep_model_file:
+            st.error("No deposit model file found. Please follow instructions in https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria/tree/main to download required data artifacts.")
 
         if selected_dep_type:
             dep_model = dep_models[selected_dep_type]

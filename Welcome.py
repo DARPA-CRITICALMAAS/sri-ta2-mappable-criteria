@@ -86,6 +86,12 @@ st.session_state['preproc_dir'] = preproc_dir
 st.session_state['preproc_dir_sgmc'] = preproc_dir_sgmc
 st.session_state['preproc_dir_ta1'] = preproc_dir_ta1
 
+# deposit model dir
+# deposit_model_dir = os.path.join(st.session_state['workdir'], "polygon_ranking", "deposit_models")
+deposit_model_dir = os.path.join(st.session_state['datadir'], "deposit_models")
+mkdirs.extend([deposit_model_dir])
+st.session_state['deposit_model_dir'] = deposit_model_dir
+
 # output dirs
 output_dir_layers = os.path.join(st.session_state['datadir'], 'text_emb_layers')
 mkdirs.extend([output_dir_layers])
@@ -101,11 +107,8 @@ for dir in mkdirs:
     os.makedirs(dir, exist_ok=True)
 
 # src dirs
-deposit_model_dir = os.path.join(st.session_state['workdir'], "polygon_ranking", "deposit_models")
 boundaries_dir = os.path.join(st.session_state['workdir'], 'polygon_ranking', 'boundaries')
-st.session_state['deposit_model_dir'] = deposit_model_dir
 st.session_state['boundaries_dir'] = boundaries_dir
-
 
 st.session_state['USGS_Shapefile_fname'] = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Shapefiles", "SGMC_Geology.shp")
 st.session_state['USGS_Table_fname'] = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Tables_CSV", "SGMC_Units.csv")
