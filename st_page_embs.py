@@ -593,7 +593,7 @@ def prepare_shapefile():
     
     # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
     if 'cmas' not in st.session_state:
-        st.session_state['cmas'] = get_cmas(cdr_key = st.secrets['cdr_key']) if 'cdr_key' in st.secrets else []
+        st.session_state['cmas'] = get_cmas(cdr_key = st.secrets['cdr_key'], size=20) if 'cdr_key' in st.secrets else []
 
     boundary_files = ['N/A'] \
         + os.listdir(st.session_state['download_dir_user_boundary']) \

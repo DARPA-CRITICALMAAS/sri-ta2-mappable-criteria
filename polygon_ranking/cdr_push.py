@@ -23,17 +23,21 @@ def get_cmas(cdr_key, size=100):
     }
     page = 0
     all_response = []
-    while True:
-        params = {
-            'page': str(page),
-            'size': str(size),
-        }
-        response = requests.get(url, params=params, headers=headers)
-        page += 1
-        if response.status_code == 200 and len(response.json()) > 0:
-            all_response.extend(response.json())
-        else:
-            break
+    try:
+        while True:
+            params = {
+                'page': str(page),
+                'size': str(size),
+            }
+            response = requests.get(url, params=params, headers=headers)
+            page += 1
+            if response.status_code == 200 and len(response.json()) > 0:
+                all_response.extend(response.json())
+            else:
+                break
+    except Exception as e:
+        print(e)
+        print('..... skipping .....')
     return all_response
 
 
