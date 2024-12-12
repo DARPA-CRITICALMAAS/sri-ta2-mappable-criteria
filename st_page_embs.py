@@ -106,10 +106,10 @@ def shape_file_overlay(selected_polygon, desc_col, model_name, boundary_file):
     data_ = data.copy()
     data_['embeddings'] = list(vec)
 
-    if '[CDR]' in boundary_file:
+    if '[CDR] ' in boundary_file:
         cma = None
         for item in st.session_state['cmas']:
-            if item['description'] == boundary_file.replace('[CDR]', ''):
+            if item['description'] == boundary_file.replace('[CDR] ', ''):
                 cma = item
                 break
         if not cma:
@@ -162,14 +162,14 @@ def query_polygons(selected_polygon, boundary_file, desc_col, model_name, query)
     return gpd_data
 
 
-def generate_style_func(cmap, line_color, weight, attribute):
+def generate_style_func(cmap, line_color, weight, attribute, opacity):
     def style_func(feat):
         fillcolor = cmap(feat['properties'][attribute])
         return {
                 'color': line_color,
                 'weight': weight,
                 'fillColor': fillcolor,
-                'fillOpacity': 0.8,
+                'fillOpacity': opacity,
             }
     return style_func
 
@@ -319,11 +319,11 @@ def add_temp_layer(gpd_layer, query_dict, th_min=None, th_default=None, th_max=N
         orig_values = layer_temp[desc_col_new]
 
         if th_min is None:
-            th_min = st.session_state['threshold_min']
+            th_min = st.session_state['user_cfg']['params']['percentile_threshold_min']
         if th_max is None:
             th_max  = 100
         if th_default is None:
-            th_default = st.session_state['threshold_default']
+            th_default = st.session_state['user_cfg']['params']['percentile_threshold_default']
 
         min_ = np.percentile(orig_values, th_min)
         default_ = np.percentile(orig_values, th_default)
@@ -347,8 +347,14 @@ def add_temp_layer(gpd_layer, query_dict, th_min=None, th_default=None, th_max=N
             'th_default': th_default,
             'th_max': th_max,
             'data_filtered': layer_temp_filtered,
-            'style': generate_style_func(cmap, '', 0, desc_col_new),
-            'highlight': generate_style_func(cmap, 'black', 1, desc_col_new)
+            'style': generate_style_func(
+                cmap, '', 0, desc_col_new, 
+                st.session_state['user_cfg']['params']['map_polygon_opacity']
+            ),
+            'highlight': generate_style_func(
+                cmap, 'black', 1, desc_col_new, 
+                st.session_state['user_cfg']['params']['map_polygon_opacity']
+            ),
         })
         # print(f'added new layer: {desc_col_new}')
         set_st('layer_id', st.session_state['layer_id'] + 1)
@@ -504,7 +510,9 @@ def push_layers_to_cdr(debug=True):
                         deposit_type=st.session_state['emb.dep_type'],
                         desc=desc,
                         cma_no=cma_no,
-                        sysver="v1.2")    
+                        sysver=st.session_state['user_cfg']['vars']['sys_ver'],
+                        height=st.session_state['user_cfg']['params']['raster_height'],
+                        width=st.session_state['user_cfg']['params']['raster_width'])    
                     content = get_zip_shp(layer, col_name, add_meta=desc)
 
                     if debug:
@@ -551,7 +559,7 @@ def check_shapefile():
 
 @st.dialog("Prepare shapefile", width="large")
 def prepare_shapefile():
-    col1, col2, col3 = st.columns([0.4,0.4,0.2], vertical_alignment="bottom")
+    col1, col2 = st.columns([0.8,0.2], vertical_alignment="center")
     with col1:
         sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
         ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
@@ -570,7 +578,7 @@ def prepare_shapefile():
             "Shape file",
             polygons,
             index = ind,
-            # label_visibility="collapsed",
+            label_visibility="collapsed",
         )
         set_st('emb.shapefile', shapefile)
         # if not polygon_file:
@@ -581,28 +589,28 @@ def prepare_shapefile():
     #     selected_polygon = None
 
     with col2:
-        # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
-        if 'cmas' not in st.session_state:
-            st.session_state['cmas'] = get_cmas(cdr_key = st.secrets['cdr_key'])
-
-        boundary_files = ['N/A'] \
-            + os.listdir(st.session_state['download_dir_user_boundary']) \
-            + ['[CDR]' + item['description'] for item in st.session_state['cmas']]
-        
-        ind = boundary_files.index(st.session_state['emb.area'])
-        # print('emb.area', st.session_state['emb.area'])
-        # print('ind', ind)
-        area = st.selectbox(
-            "Boundary",
-            boundary_files,
-            index = ind,
-            # label_visibility='collapsed'
-        )
-        set_st('emb.area', area)
-
-    with col3:
         st.page_link("st_page_polygons.py", label="Create", icon=":material/add:")
+    
+    # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
+    if 'cmas' not in st.session_state:
+        st.session_state['cmas'] = get_cmas(cdr_key = st.secrets['cdr_key']) if 'cdr_key' in st.secrets else []
 
+    boundary_files = ['N/A'] \
+        + os.listdir(st.session_state['download_dir_user_boundary']) \
+        + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
+    
+    ind = boundary_files.index(st.session_state['emb.area'])
+    # print('emb.area', st.session_state['emb.area'])
+    # print('ind', ind)
+    area = st.selectbox(
+        "Boundary",
+        boundary_files,
+        index = ind,
+        # label_visibility='collapsed'
+    )
+    set_st('emb.area', area)
+
+    # description column and embedding model
     col_a, col_b = st.columns([0.5, 0.5], vertical_alignment="bottom")
 
     with col_a:
@@ -940,7 +948,7 @@ def show_layers():
             zoom_start=4,
             min_zoom=2,
             max_zoom=20,
-            tiles='Cartodb Positron',
+            tiles=st.session_state['user_cfg']['params']['map_base'],
         )
         folium.plugins.Draw(
             export=True,

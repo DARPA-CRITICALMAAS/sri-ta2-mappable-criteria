@@ -1,6 +1,11 @@
-[paths]
+[vars]
+sys_ver = 'v1.2'
 data_dir = '../workdir-data'
 
 [params]
 percentile_threshold_min = 80
 percentile_threshold_default = 90
+raster_height = 500
+raster_width = 500
+map_base = 'Cartodb Positron'
+map_polygon_opacity = 0.8

@@ -55,8 +55,10 @@ mkdirs = []
 with open('config.toml', 'r') as f:
     user_cfg = toml.load(f)
 
+st.session_state['user_cfg'] = user_cfg
+
 workdir = './'
-datadir = user_cfg['paths']['data_dir']
+datadir = user_cfg['vars']['data_dir']
 
 mkdirs.extend([workdir, datadir])
 st.session_state['workdir'] = workdir
@@ -135,10 +137,6 @@ if 'temp_gpd_data' not in st.session_state:
 
 if 'layer_id' not in st.session_state:
     st.session_state['layer_id'] = 0
-
-st.session_state['threshold_min'] = user_cfg['params']['percentile_threshold_min']
-st.session_state['threshold_default'] = user_cfg['params']['percentile_threshold_default']
-
 
 
 # # st.write("# Welcome message")
