@@ -155,6 +155,7 @@ You can find more details about it from the steps below.
 
 5.  Secrets
     ```bash
+    cd $HOME/app/sri-ta2-mappable-criteria/
     cat > .streamlit/secrets.toml << EOF
     password = "<Create a password>"
     cdr_key = "<Your CDR Key>"
