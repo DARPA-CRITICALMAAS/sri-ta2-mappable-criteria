@@ -71,7 +71,7 @@ mv SGMC_preproc_default.gpkg $HOME/app/workdir-data/preproc/sgmc/
 echo "[Deposit model] _Default_.json ..."
 mkdir -p $HOME/app/workdir-data/deposit_models
 wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/_Default_.json
-mv _Default_.json $HOME/app/workdir-data/deposit_models
+mv _Default_.json $HOME/app/workdir-data/deposit_models/
 
 # envs
 echo "Creating 'secrets.toml'"
