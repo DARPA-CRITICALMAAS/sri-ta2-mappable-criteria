@@ -58,8 +58,8 @@ else
 fi
 
 # pull docker
-echo "Pulling image 'mye1225/cmaas-sri-queryplot:1.2'"
-sudo docker pull mye1225/cmaas-sri-queryplot:1.2
+echo "Pulling image 'mye1225/cmaas-sri-queryplot'"
+sudo docker pull mye1225/cmaas-sri-queryplot:latest
 
 # data artifacts and config
 echo "Downloading data artifacts"
@@ -88,5 +88,5 @@ sudo docker run \
     -v $HOME/app/secrets.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/.streamlit/secrets.toml \
     -v $HOME/app/workdir-data:/home/ubuntu/app/workdir-data \
     -p 8501:8501 \
-    mye1225/cmaas-sri-queryplot:1.2
+    mye1225/cmaas-sri-queryplot:latest
 
