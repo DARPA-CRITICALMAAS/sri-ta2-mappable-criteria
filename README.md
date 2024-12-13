@@ -80,23 +80,19 @@ You can find more details about it from the steps below.
     ```
 
 4. Create `secrets.toml` file
-    1.  Export environment variables
-        ```bash
-        export QUERYPLOT_PWD=<Your password>
-        export CDR_KEY=<Your CDR key>
-        export OPENAI_KEY=<Your OpenAI key>  # optional
-        ```
+    ```bash
+    # export QUERYPLOT_PWD=<Your password>
+    # export CDR_KEY=<Your CDR key>
+    # export OPENAI_KEY=<Your OpenAI key>  
 
-    2.  Create file
-        ```bash
-        # envs
-        echo "Creating 'secrets.toml'"
-        cat > $HOME/app/secrets.toml << EOF
-        password = "${QUERYPLOT_PWD:-CriticalMaas}"
-        cdr_key = "${CDR_KEY:-}"
-        openai_key = "${OPENAI_KEY:-}"
-        EOF
-        ```
+    # create secret file from envs
+    echo "Creating 'secrets.toml'"
+    cat > $HOME/app/secrets.toml << EOF
+    password = "${QUERYPLOT_PWD:-CriticalMaas}"
+    cdr_key = "${CDR_KEY:-}"
+    openai_key = "${OPENAI_KEY:-}"
+    EOF
+    ```
 
 5. Create and run container
     ```bash
@@ -123,26 +119,24 @@ You can find more details about it from the steps below.
     ```
     This script will do the following things:
 
-    1. Install dependencies
-        ```bash
-        sudo apt update
-        sudo apt install -y python3-pip
-        sudo apt install -y python3.12-venv
-        sudo apt-get install -y libgtk-3-dev
-        sudo apt-get install -y libgdal-dev gdal-bin python3-gdal
-        sudo apt-get install -y python3.12-dev
-        sudo apt-get install unzip
-        export CPLUS_INCLUDE_PATH=/usr/include/gdal
-        export C_INCLUDE_PATH=/usr/include/gdal
-        ```
+    ```bash
+    # Install dependencies
+    sudo apt update
+    sudo apt install -y python3-pip
+    sudo apt install -y python3.12-venv
+    sudo apt-get install -y libgtk-3-dev
+    sudo apt-get install -y libgdal-dev gdal-bin python3-gdal
+    sudo apt-get install -y python3.12-dev
+    sudo apt-get install unzip
+    export CPLUS_INCLUDE_PATH=/usr/include/gdal
+    export C_INCLUDE_PATH=/usr/include/gdal
 
-    2. Prepare python environment
-        ```bash
-        python3 -m venv /home/ubuntu/venvs/sri-map-synth
-        source /home/ubuntu/venvs/sri-map-synth/bin/activate
-        pip install GDAL==`gdal-config --version`
-        pip install -r polygon_ranking/requirements.txt
-        ```
+    # Prepare python environment
+    python3 -m venv /home/ubuntu/venvs/sri-map-synth
+    source /home/ubuntu/venvs/sri-map-synth/bin/activate
+    pip install GDAL==`gdal-config --version`
+    pip install -r polygon_ranking/requirements.txt
+    ```
 
 3.  Setup USGS DOI SSL
 
