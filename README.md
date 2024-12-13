@@ -23,6 +23,13 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
     -   add type `Custom TCP` on port `8501` to `Inbound rules`
 
 ### Installation with Docker
+Simply run the script
+```bash
+QUERYPLOT_PWD=<Your password> CDR_KEY=<Your CDR key> bash setup_docker.sh
+```
+This script automatically installs docker (will skip if docker is already installed), pulls the pre-built image, download necessary data artifacts, and runs the container.
+You can find more details about it from the steps below.
+
 1.  Install Docker
     ```bash
     # https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
@@ -52,15 +59,11 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
     ```
 
     Alternatively, you can also build docker image from source
-    1.  `git clone`
-        ```bash
-        git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git
-        cd sri-ta2-mappable-criteria
-        ```
-    2.  `docker build`
-        ```bash
-        docker build -t cmaas-sri-queryplot .
-        ```
+    ```bash
+    git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git
+    cd sri-ta2-mappable-criteria
+    docker build -t cmaas-sri-queryplot .
+    ```
 
 3. Download data artifacts
     ```bash
