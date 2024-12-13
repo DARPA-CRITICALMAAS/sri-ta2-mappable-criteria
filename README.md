@@ -6,37 +6,115 @@
 # QueryPlot - Generating mineral evidence maps from geological queries
 This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program. QueryPlot uses transformer encoder to extract sentence embeddings from polygon descriptions and compare them with a user query embedding to find the top relevant polygons. A user can use either custom query or pre-defined descriptive deposit models to search polygons and download the result layers for further processing in local GIS software.
 
-## System setup (on AWS)
-1. Create an EC2 instance and connect to it through console
-    -   Amazon Machine Image (AMI)
-        -   Ubuntu Server 24.04 LTS
-    -   System spec (recommend m8g.2xlarge equivalent or higher)
-        -   CPU: 2.3 GHz
-        -   Number of (v)CPUs: 8
-        -   Memory: 32 GiB
-        -   Storage: 200 GiB
-        -   GPU: not required
-    -   Security Groups setting
-        -   add type `Custom TCP` on port `8501` to `Inbound rules`
 
-2.  Pull code
+## Installation (on AWS)
+### Launch EC2 instance
+-   Amazon Machine Image (AMI)
+    -   Ubuntu Server 24.04 LTS
+-   System spec (recommend m7a.2xlarge equivalent or higher)
+    -   CPU: 3.7 GHz
+    -   Cores: 8
+    -   Arch: x86_64
+    -   Number of (v)CPUs: 8
+    -   Memory: 32 GiB
+    -   Storage: 200 GiB
+    -   GPU: not required
+-   Security Groups setting
+    -   add type `Custom TCP` on port `8501` to `Inbound rules`
+
+### Installation with Docker
+1.  Install Docker
     ```bash
-    mkdir /home/ubuntu/app
-    cd /home/ubuntu/app
+    # https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
+    # Add Docker's official GPG key:
+    sudo apt-get update
+    sudo apt-get install ca-certificates curl
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+    # Add the repository to Apt sources:
+    echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update
+
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Add current user to the Docker group (optional, avoids using 'sudo' for Docker commands)
+    sudo usermod -aG docker $USER
+    ```
+
+2.  Pull image from DockerHub
+    ```bash
+    docker pull mye1225/cmaas-sri-queryplot:latest
+    ```
+
+    Alternatively, you can also build docker image from source
+    1.  `git clone`
+        ```bash
+        git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git
+        cd sri-ta2-mappable-criteria
+        ```
+    2.  `docker build`
+        ```bash
+        docker build -t cmaas-sri-queryplot .
+        ```
+
+3. Download data artifacts
+    ```bash
+    echo "Downloading data artifacts"
+    echo "[Shapefile] SGMC_preproc_default.gpkg ..."
+    mkdir -p $HOME/app/workdir-data/preproc/sgmc
+    wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/SGMC_preproc_default.gpkg
+    mv SGMC_preproc_default.gpkg $HOME/app/workdir-data/preproc/sgmc/
+
+    echo "[Deposit model] _Default_.json ..."
+    mkdir -p $HOME/app/workdir-data/deposit_models
+    wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/_Default_.json
+    mv _Default_.json $HOME/app/workdir-data/deposit_models
+    ```
+
+4. Create `secrets.toml` file
+    1.  Export environment variables
+        ```bash
+        export QUERYPLOT_PWD=<Your password>
+        export CDR_KEY=<Your CDR key>
+        export OPENAI_KEY=<Your OpenAI key>  # optional
+        ```
+
+    2.  Create file
+        ```bash
+        # envs
+        echo "Creating 'secrets.toml'"
+        cat > $HOME/app/secrets.toml << EOF
+        password = "${QUERYPLOT_PWD:-CriticalMaas}"
+        cdr_key = "${CDR_KEY:-}"
+        openai_key = "${OPENAI_KEY:-}"
+        EOF
+        ```
+
+5. Create and run container
+    ```bash
+    docker run \
+    -d \
+    -v $HOME/app/secrets.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/.streamlit/secrets.toml \
+    -v $HOME/app/workdir-data:/home/ubuntu/app/workdir-data \
+    -p 8501:8501 \
+    mye1225/cmaas-sri-queryplot:latest
+    ```
+
+### Install manually
+1.  Pull code
+    ```bash
+    mkdir $HOME/app
+    cd $HOME/app
     git clone https://github.com/DARPA-CRITICALMAAS/sri-ta2-mappable-criteria.git
     cd sri-ta2-mappable-criteria/
     ```
 
-3. Secrets
-    ```bash
-    cat > .streamlit/secrets.toml << EOF
-    password = "<Create a password>"
-    cdr_key = "<Your CDR Key>"
-    openai_key = "<Your OpenAI Key>"  # This is optional
-    EOF
-    ```
-
-4. Setup environment
+2. Setup environment
     ```bash
     bash setup_aws.sh
     ```
@@ -63,7 +141,31 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
         pip install -r polygon_ranking/requirements.txt
         ```
 
-5. Start service
+3.  Setup USGS DOI SSL
+
+4.  Download data artifacts
+    ```bash
+    echo "[Shapefile] SGMC_preproc_default.gpkg ..."
+    mkdir -p $HOME/app/workdir-data/preproc/sgmc
+    wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/SGMC_preproc_default.gpkg
+    mv SGMC_preproc_default.gpkg $HOME/app/workdir-data/preproc/sgmc/
+
+    echo "[Deposit model] _Default_.json ..."
+    mkdir -p $HOME/app/workdir-data/deposit_models
+    wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/_Default_.json
+    mv _Default_.json $HOME/app/workdir-data/deposit_models
+    ```
+
+5.  Secrets
+    ```bash
+    cat > .streamlit/secrets.toml << EOF
+    password = "<Create a password>"
+    cdr_key = "<Your CDR Key>"
+    openai_key = "<Your OpenAI Key>"  # This is optional
+    EOF
+    ```
+
+6.  Start service
     ```bash
     bash start_server.sh
     ```
@@ -72,23 +174,7 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
     -   *The logs will be written to file `streamlit.log`*
     -   *The PID will be stored in `streamlit_pid.txt` for terminating the process in the future*
     
-6. Access QueryPlot in a browser
+### Use the tool
+To access QueryPlot, open a browser and type in the IP address of your EC2 instance and the port number (e.g., `http://your.ec2.ip.address:8501`)
 
-    To access it, open a browser and type in the ip address of your EC2 instance and the port number (e.g., `http://your.ec2.ip.address:8501`)
-
-
-## Docker image
-- Build docker image
-
-- Docker run
-
-## Prepare polygon data
-Once the server has been set up and the service is running, download the preprocessed SGMC shape file into corresponding directory:
-```bash
-cd /path/to/workdir-data/preproc/sgmc/
-wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/SGMC_preproc_default.gpkg
-```
-Alternatively, you could also create the shapefile from scratch within QueryPlot by following the `How to create your own shapefile` section in the [user manual](https://docs.google.com/document/d/1WTDQBVn73pqW3YsGDRtNmBFUjEyRdCFV)
-
-## Generate evidence map layers
 Follow the instructions in [user manual](https://docs.google.com/document/d/1WTDQBVn73pqW3YsGDRtNmBFUjEyRdCFV) or watch this 8-minute [video](https://drive.google.com/file/d/1eSYXvgU6Voj8XXoXC2xKEyTE8t9aZun6) to learn how to use QueryPlot.
