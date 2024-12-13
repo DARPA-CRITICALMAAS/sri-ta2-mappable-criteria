@@ -75,7 +75,7 @@ mv _Default_.json $HOME/app/workdir-data/deposit_models
 
 # envs
 echo "Creating 'secrets.toml'"
-cat > secrets.toml << EOF
+cat > $HOME/app/secrets.toml << EOF
 password = "${QUERYPLOT_PWD:-CriticalMaas}"
 cdr_key = "${CDR_KEY:-}"
 openai_key = "${OPENAI_KEY:-}"
@@ -84,8 +84,7 @@ EOF
 # docker run
 echo "Docker run"
 sudo docker run \
-    --rm \
-    -it \
+    -d \
     -v $HOME/app/secrets.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/.streamlit/secrets.toml \
     -v $HOME/app/workdir-data:/home/ubuntu/app/workdir-data \
     -p 8501:8501 \
