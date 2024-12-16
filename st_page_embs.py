@@ -81,7 +81,6 @@ def stream_stdout(process):
     else:
         raise st.warning("Job failed!")
 
-
 @st.cache_data
 def load_shape_file(filename):
     if filename.endswith('.parquet'):
@@ -89,6 +88,32 @@ def load_shape_file(filename):
     else:
         data = gpd.read_file(filename)
     return data
+
+@st.cache_data
+def load_boundary(fname):
+    if '[CDR] ' in fname:
+        cma = None
+        for item in st.session_state['cmas']:
+            if item['description'] == fname.replace('[CDR] ', ''):
+                cma = item
+                break
+        if not cma:
+            return None
+        else:
+            area = gpd.GeoDataFrame(
+                {
+                    'description': [cma['description']],
+                    'mineral': [cma['mineral']],
+                },
+                geometry=[shape(item['extent'])],
+                crs=item['crs'],
+            )
+    else:
+        area = load_shape_file(os.path.join(
+            st.session_state['download_dir_user_boundary'],
+            fname
+        ))
+    return area
 
 @st.cache_resource
 def load_hf_model(model_name="iaross/cm_bert"):
@@ -106,28 +131,7 @@ def shape_file_overlay(selected_polygon, desc_col, model_name, boundary_file):
     data_ = data.copy()
     data_['embeddings'] = list(vec)
 
-    if '[CDR] ' in boundary_file:
-        cma = None
-        for item in st.session_state['cmas']:
-            if item['description'] == boundary_file.replace('[CDR] ', ''):
-                cma = item
-                break
-        if not cma:
-            return data, vec
-        else:
-            area = gpd.GeoDataFrame(
-                {
-                    'description': [cma['description']],
-                    'mineral': [cma['mineral']],
-                },
-                geometry=[shape(item['extent'])],
-                crs=item['crs'],
-            ).to_crs(data_.crs)
-    else:
-        area = load_shape_file(os.path.join(
-            st.session_state['download_dir_user_boundary'],
-            boundary_file
-        )).to_crs(data_.crs)
+    area = load_boundary(boundary_file).to_crs(data_.crs)
 
     cols = data_.columns
     data_ = data_.overlay(area, how="intersection")[cols]
@@ -531,10 +535,11 @@ def push_layers_to_cdr(debug=True):
                             response = push_to_cdr(cdr_key, metadata, filepath=col_name+".zip", content=content)
                         elif fmt == '.tiff':
                             metadata['format'] = 'tif'
+                            boundary = load_boundary(st.session_state['emb.area'])
                             response = raster_and_push(
                                 layer,
                                 col='query_sim',
-                                boundary=load_shape_file(os.path.join(st.session_state['download_dir_user_boundary'], st.session_state['emb.area'])),
+                                boundary=boundary,
                                 metadata=metadata,
                                 url=st.session_state['user_cfg']['endpoints']['cdr_push'],
                                 cdr_key=cdr_key,
