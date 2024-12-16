@@ -103,6 +103,34 @@ You can find more details about it from the steps below.
     -p 8501:8501 \
     mye1225/cmaas-sri-queryplot:latest
     ```
+    *Note: You could optionally create a new `config.toml` file (e.g., `$HOME/app/config.toml`) to replace the default one:*
+    ```toml
+    [vars]
+    sys_ver = 'v1.3'
+    data_dir = '../workdir-data'
+
+    [endpoints]
+    cdr_cmas = 'https://api.cdr.land/v1/prospectivity/cmas'
+    cdr_push = 'https://api.cdr.land/v1/prospectivity/datasource'
+
+    [params]
+    percentile_threshold_min = 80
+    percentile_threshold_default = 90
+    raster_height = 500
+    raster_width = 500
+    map_base = 'Cartodb Positron'
+    map_polygon_opacity = 0.8
+    ```
+    *If you do that, make sure to mount it to the container for the modification to be effective:*
+    ```bash
+    docker run \
+    -d \
+    -v $HOME/app/secrets.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/.streamlit/secrets.toml \
+    -v $HOME/app/config.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/config.toml
+    -v $HOME/app/workdir-data:/home/ubuntu/app/workdir-data \
+    -p 8501:8501 \
+    mye1225/cmaas-sri-queryplot:latest
+    ```
 
 ### Install manually
 1.  Pull code
