@@ -15,8 +15,8 @@ from rasterio.warp import calculate_default_transform, reproject, Resampling
 from rasterio.transform import from_bounds
 
 
-def get_cmas(cdr_key, size=100):
-    url = 'https://api.cdr.land/v1/prospectivity/cmas'
+def get_cmas(url, cdr_key, size=100):
+    # url = 'https://api.cdr.land/v1/prospectivity/cmas'
     headers = {
         'accept': 'application/json',
         'Authorization': f'Bearer {cdr_key}',
@@ -52,8 +52,8 @@ def get_ftype(fname):
         raise ValueError(f"file type '{ext}' not supported.")
     return type
 
-def push_to_cdr(cdr_key, metadata, filepath=None, content=None):
-    url = "https://api.cdr.land/v1/prospectivity/datasource"
+def push_to_cdr(url, cdr_key, metadata, filepath=None, content=None):
+    # url = "https://api.cdr.land/v1/prospectivity/datasource"
     headers = {
         "accept": "application/json",
         "Authorization": f"Bearer {cdr_key}",
@@ -75,7 +75,7 @@ def push_to_cdr(cdr_key, metadata, filepath=None, content=None):
     return response
 
 
-def raster_and_push(gdf_original, col, boundary=None, metadata=None, cdr_key=None, outpath=None, pixel_size=500, dry_run=True, crs="ESRI:102008", fill_nodata=-10e9):
+def raster_and_push(gdf_original, col, boundary=None, metadata=None, url=None, cdr_key=None, outpath=None, pixel_size=500, dry_run=True, crs="ESRI:102008", fill_nodata=-10e9):
 
     # 1. reproject vector data
     gdf = gdf_original.to_crs(crs)
@@ -157,7 +157,7 @@ def raster_and_push(gdf_original, col, boundary=None, metadata=None, cdr_key=Non
                 # Prepare the data for posting
                 memfile.seek(0)
                 file_content = io.BytesIO(memfile.read())
-                response = push_to_cdr(cdr_key, metadata, filepath=out_tif, content=file_content)
+                response = push_to_cdr(url, cdr_key, metadata, filepath=out_tif, content=file_content)
         
             # # Check the response
             if response.status_code == 200:

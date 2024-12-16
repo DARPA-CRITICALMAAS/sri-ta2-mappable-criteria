@@ -2,6 +2,10 @@
 sys_ver = 'v1.3'
 data_dir = '../workdir-data'
 
+[endpoints]
+cdr_cmas = 'https://api.cdr.land/v1/prospectivity/cmas'
+cdr_push = 'https://api.cdr.land/v1/prospectivity/datasource'
+
 [params]
 percentile_threshold_min = 80
 percentile_threshold_default = 90
