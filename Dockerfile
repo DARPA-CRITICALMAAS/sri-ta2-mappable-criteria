@@ -29,8 +29,8 @@ WORKDIR /home/ubuntu/app/sri-ta2-mappable-criteria
 COPY . .
 
 RUN python3 -m venv /home/ubuntu/venvs/sri-map-synth
-ENV VIRTUAL_ENV /home/ubuntu/venvs/sri-map-synth
-ENV PATH /home/ubuntu/venvs/sri-map-synth/bin:$PATH
+ENV VIRTUAL_ENV="/home/ubuntu/venvs/sri-map-synth"
+ENV PATH="/home/ubuntu/venvs/sri-map-synth/bin:$PATH"
 RUN pip install GDAL==`gdal-config --version`
 RUN pip install -r polygon_ranking/requirements.txt
 
