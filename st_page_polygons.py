@@ -7,6 +7,12 @@ import zipfile
 import io
 import geopandas as gpd
 import pandas as pd
+from st_page_embs import load_boundary
+
+import folium
+import folium.features
+from streamlit_folium import st_folium
+
 
 
 if not st.session_state.get("password_correct", False):
@@ -139,7 +145,7 @@ def gdf_merge_concat(data1, data2, key_cols, cols, desc_col, dissolve=False):
     # data_merge[desc_col] = data_merge[desc_col].apply(lambda x: x.replace('-', ' - '))
     return data_merge
 
-st.page_link("st_page_embs.py", label="Back", icon=":material/arrow_back:")
+st.page_link("st_page_embs.py", label="Back", icon=":material/undo:")
 
 import leafmap.deck as leafmap
 
@@ -184,20 +190,20 @@ if selected_polygon:
     st.dataframe(st.session_state['polygons'][selected_polygon]['raw'].sample(n=10))
 
 
-tab1, tab2, tab3 = st.tabs(["SGMC", "TA1", "upload"])
+tab1, tab2, tab3 = st.tabs([":material/database: SGMC", ":material/map: Map extraction", ":material/upload: Upload"])
 
 with tab1:
 
     col1, col2 = st.columns(2)            
     with col1:
-        downloaded_files = [f for f in os.listdir(download_dir_sgmc) if 'usgs' in f.lower()]
-        st.write('### Downloaded SGMC files:')
-        for f in downloaded_files:
-            st.write(f)
+        st.write('Downloaded SGMC files:')
+        with st.container(border=True):
+            downloaded_files = [f for f in os.listdir(download_dir_sgmc) if 'usgs' in f.lower()]
+            for f in downloaded_files:
+                st.write(f)
 
     with col2:
-        st.write("### Download SGMC")
-        download_sgmc = st.button("Download", icon=":material/download:")
+        download_sgmc = st.button("Download SGMC", icon=":material/download:")
         if download_sgmc:
             shp_fname = "USGS_SGMC_Shapefiles.zip"
             shapefile_fullpath = os.path.join(download_dir_sgmc, shp_fname)
@@ -237,153 +243,213 @@ with tab1:
 
     if len(downloaded_files) == 0:
         st.warning("please hit the 'download' button to download SGMC dataset first")
-    
     else:
+        st.write("Preprocess SGMC")
+        with st.container(border=True):
+            # if 'USGS_Shapefile' not in st.session_state or st.session_state['USGS_Shapefile'] is None:
+            #     fname = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Shapefiles", "SGMC_Geology.shp")
+            #     st.session_state['USGS_Shapefile'] = gpd.read_file(fname)
+            
+            # if 'USGS_Table' not in st.session_state or st.session_state['USGS_Table'] is None:
+            #     fname = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Tables_CSV", "SGMC_Units.csv")
+            #     st.session_state['USGS_Table'] = pd.read_csv(fname)
 
-        st.write("### Preprocess SGMC")
-        # if 'USGS_Shapefile' not in st.session_state or st.session_state['USGS_Shapefile'] is None:
-        #     fname = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Shapefiles", "SGMC_Geology.shp")
-        #     st.session_state['USGS_Shapefile'] = gpd.read_file(fname)
-        
-        # if 'USGS_Table' not in st.session_state or st.session_state['USGS_Table'] is None:
-        #     fname = os.path.join(preproc_dir_sgmc, "USGS_SGMC_Tables_CSV", "SGMC_Units.csv")
-        #     st.session_state['USGS_Table'] = pd.read_csv(fname)
+            # data1_sample = st.session_state['USGS_Shapefile'].sample(n=20)
+            # data2_sample = st.session_state['USGS_Table'].sample(n=20)
 
-        # data1_sample = st.session_state['USGS_Shapefile'].sample(n=20)
-        # data2_sample = st.session_state['USGS_Table'].sample(n=20)
+            with st.expander("USGS_SGMC_Shapefiles (sample)"):
+                if os.path.exists(st.session_state['USGS_Shapefile_fname']):
+                    tmp_shp = gpd.read_file(st.session_state['USGS_Shapefile_fname'], rows=10)
+                    st.dataframe(tmp_shp)
+                else:
+                    tmp_shp = None
 
-        with st.expander("USGS_SGMC_Shapefiles (sample)"):
-            if os.path.exists(st.session_state['USGS_Shapefile_fname']):
-                tmp_shp = gpd.read_file(st.session_state['USGS_Shapefile_fname'], rows=10)
-                st.dataframe(tmp_shp)
-            else:
-                tmp_shp = None
+            with st.expander("USGS_SGMC_Tables_CSV (sample)"):
+                if os.path.exists(st.session_state['USGS_Table_fname']):
+                    tmp_csv = pd.read_csv(st.session_state['USGS_Table_fname'], nrows=10)
+                    st.dataframe(tmp_csv)
+                else:
+                    tmp_csv = None
 
-        with st.expander("USGS_SGMC_Tables_CSV (sample)"):
-            if os.path.exists(st.session_state['USGS_Table_fname']):
-                tmp_csv = pd.read_csv(st.session_state['USGS_Table_fname'], nrows=10)
-                st.dataframe(tmp_csv)
-            else:
-                tmp_csv = None
+            with st.expander("Merging configs"):
+                if tmp_shp is not None and tmp_csv is not None:
+                    col1 = list(tmp_shp.columns)
+                    col2 = list(tmp_csv.columns)
+                    all_cols = list(set(col1+col2))
+                    shared_cols = list(set(col1).intersection(set(col2)))
+                    other_cols = list(set(all_cols).difference(set(shared_cols)))
 
-        with st.expander("Merging configs"):
-            if tmp_shp is not None and tmp_csv is not None:
-                col1 = list(tmp_shp.columns)
-                col2 = list(tmp_csv.columns)
-                all_cols = list(set(col1+col2))
-                shared_cols = list(set(col1).intersection(set(col2)))
-                other_cols = list(set(all_cols).difference(set(shared_cols)))
+                    key_cols = st.multiselect(
+                        "join two tables on these attributes:",
+                        shared_cols,
+                        ['STATE', 'ORIG_LABEL', 'SGMC_LABEL', 'UNIT_LINK', 'UNIT_NAME'],
+                    )
 
-                key_cols = st.multiselect(
-                    "join two tables on these attributes:",
-                    shared_cols,
-                    ['STATE', 'ORIG_LABEL', 'SGMC_LABEL', 'UNIT_LINK', 'UNIT_NAME'],
-                )
+                    cols = st.multiselect(
+                        "concatenate columns into a long description:",
+                        all_cols,
+                        ['UNIT_NAME', 'MAJOR1', 'MAJOR2', 'MAJOR3', 'MINOR1', 'MINOR2', 'MINOR3', 'MINOR4', 'MINOR5', 'GENERALIZE', 'UNITDESC']
+                    )
+                    desc_col = st.text_input(
+                        "long description column name:",
+                        "full_desc"
+                    )
 
-                cols = st.multiselect(
-                    "concatenate columns into a long description:",
-                    all_cols,
-                    ['UNIT_NAME', 'MAJOR1', 'MAJOR2', 'MAJOR3', 'MINOR1', 'MINOR2', 'MINOR3', 'MINOR4', 'MINOR5', 'GENERALIZE', 'UNITDESC']
-                )
-                desc_col = st.text_input(
-                    "long description column name:",
-                    "full_desc"
-                )
+                    dissolve = st.checkbox("dissolve", True)
 
-                dissolve = st.checkbox("dissolve", True)
+            out_fname = st.text_input(
+                "Output file:",
+                "SGMC_preproc.tmp.gpkg"
+            )
+            out_fname_ = os.path.join(preproc_dir_sgmc, out_fname)
 
-        out_fname = st.text_input(
-            "Output file:",
-            "SGMC_preproc.tmp.gpkg"
-        )
-        out_fname_ = os.path.join(preproc_dir_sgmc, out_fname)
-
-        merge = st.button("Merge", icon=":material/join:")
-        if merge:
-            data = gdf_merge_concat(
-                gpd.read_file(st.session_state['USGS_Shapefile_fname']),
-                pd.read_csv(st.session_state['USGS_Table_fname']), 
-                key_cols, cols, desc_col, dissolve)
-            data.to_file(out_fname_, driver="GPKG")
-        
-        if os.path.exists(out_fname_):
-            data = gpd.read_file(out_fname_)
-            data_sample = data.sample(n=20)
-            st.write(f"Output (sample):")
-            st.dataframe(data_sample)
+            merge = st.button("Merge", icon=":material/join:")
+            if merge:
+                data = gdf_merge_concat(
+                    gpd.read_file(st.session_state['USGS_Shapefile_fname']),
+                    pd.read_csv(st.session_state['USGS_Table_fname']), 
+                    key_cols, cols, desc_col, dissolve)
+                data.to_file(out_fname_, driver="GPKG")
+            
+            if os.path.exists(out_fname_):
+                data = gpd.read_file(out_fname_)
+                data_sample = data.sample(n=20)
+                st.write(f"Output (sample):")
+                st.dataframe(data_sample)
 
 
 with tab2:
-    st.write("### Download TA1 polygons")
-    with st.form("submit_job"):
-        cdr_key = st.text_input(
-            "CDR key",
-            placeholder="CDR key",
-            type="password",
-            label_visibility="collapsed"
-        )
+    st.write("Fetch polygon features")
 
-        with st.expander("Parameters"):
-            system = st.text_input("TA1 system", "umn-usc-inferlink")
+    with st.container(border=True, height=480):
+        col1, col2 = st.columns([0.4, 0.6])
+
+        with col1:
+            # cdr_key = st.text_input(
+            #     "CDR key",
+            #     st.secrets['cdr_key'],
+            #     placeholder="CDR key",
+            #     type="password",
+            #     label_visibility="collapsed"
+            # )
+
+
+            system = st.text_input("system", "umn-usc-inferlink")
             version = st.text_input("version", "0.0.5")
-            polygon = st.text_input("Extent",
-                "[[-122.0, 43.0], [-122.0, 35.0], [-114.0, 35.0], [-114.0, 43.0], [-122.0, 43.0]]"
+
+            polygon = []
+
+            boundary_files = os.listdir(st.session_state['download_dir_user_boundary']) \
+            + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
+
+            if st.session_state['emb.area'] != 'N/A':
+                ind = boundary_files.index(st.session_state['emb.area'])
+            else:
+                ind = 0
+            area = st.selectbox(
+                "Extent",
+                boundary_files,
+                index = ind,
+            )
+            boundary = load_boundary(area).to_crs(epsg=4326)
+            coordinates_list = []
+            for geom in boundary.geometry:
+                if geom.geom_type == 'Polygon':
+                    exterior_coords = list(geom.exterior.coords)  # Outer boundary
+                    interior_coords = [list(ring.coords) for ring in geom.interiors]  # Holes
+                    coordinates_list.append([exterior_coords] + interior_coords)
+                elif geom.geom_type == 'MultiPolygon':
+                    multi_coords = []
+                    for part in geom.geoms:
+                        exterior_coords = list(part.exterior.coords)  # Outer boundary
+                        interior_coords = [list(ring.coords) for ring in part.interiors]  # Holes
+                        multi_coords.append([exterior_coords] + interior_coords)
+                    coordinates_list.append(multi_coords)
+
+            while len(coordinates_list) == 1:
+                coordinates_list = coordinates_list[0]
+
+            # st.write(coordinates_list)
+            # polygon = st.text_input("Extent",
+            #     "[[-122.0, 43.0], [-122.0, 35.0], [-114.0, 35.0], [-114.0, 43.0], [-122.0, 43.0]]"
+            # )
+            # polygon = ast.literal_eval(polygon.strip())        
+            if st.button("Submit"):
+                response = cdr_intersect_package(system, version, coordinates_list, st.secrets["cdr_key"])
+                st.info(response)
+                st.info("If the job was successfully submitted, please keep a copy of the job_id, which will be required later to retrieve the results.")
+        
+        with col2:
+            map = folium.Map(
+                location=(38, -100),
+                zoom_start=4,
+                min_zoom=4,
+                max_zoom=10,
+                tiles=st.session_state['user_cfg']['params']['map_base'],
+            )
+            polygon_folium = folium.GeoJson(
+                data=boundary,
+                style_function=lambda _x: {
+                    "fillColor": "#1100f8",
+                    "color": "#1100f8",
+                    "fillOpacity": 0.13,
+                    "weight": 2,
+                }
+            )
+            fg = folium.FeatureGroup(name="Extent")
+            fg.add_child(polygon_folium)
+            
+            markers = st_folium(
+                map,
+                height=400,
+                use_container_width=True,
+                feature_group_to_add=fg,
+                returned_objects=[],
             )
 
-        polygon = ast.literal_eval(polygon.strip())
-
-        submit = st.form_submit_button(
-            "Submit CDR request"
+    st.write("Check job status")
+    with st.container(border=True):
+        job_id = st.text_input(
+            "job_id",
+            placeholder="job_id",
+            label_visibility="collapsed"
         )
-        if submit:
-            response = cdr_intersect_package(system, version, polygon, cdr_key)
-            st.info(response)
-
-    job_id = st.text_input(
-        "job_id",
-        placeholder="job_id",
-        label_visibility="collapsed"
-    )
-    col1, col2 = st.columns(2)
-    with col1:
         check = st.button(
-            "Check job status"
+            "Check"
         )
         if check:
             if job_id:
-                status = cdr_check_job(job_id, cdr_key)
+                status = cdr_check_job(job_id, st.secrets['cdr_key'])
                 st.write(status)
             else:
                 st.warning("please provide a valid job_id")
-    with col2:
         download = st.button("download")
         if download:
-            cdr_download_job(job_id, download_dir_ta1, cdr_key)
+            cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
             # result = cdr_download_job(job_id, cdr_key)
             # z = zipfile.ZipFile(io.BytesIO(result.content))
             # z.extractall(download_dir_ta1)
 
-    st.write("### Preprocess TA1 polygons")
+    st.write("Merge fetched polygons")
+    with st.container(border=True):
+        downloaded_files = [f for f in os.listdir(download_dir_ta1) if f.endswith('.zip')]
+        selected_zip = st.selectbox(
+            "Choose a file:",
+            downloaded_files,
+            index=None
+        )
+        process = st.button("Merge")
+        if selected_zip and process:
+            zip_fullpath = os.path.join(download_dir_ta1, selected_zip)
+            out_dir = os.path.join(preproc_dir_ta1, selected_zip.replace('.zip',''))
+            if not os.path.exists(zip_fullpath.replace('.zip', '')):
+                unzip(zip_fullpath, out_dir)
+            if not os.path.exists(out_dir+'.gpkg'):
+                zip_to_gpkg(out_dir)
 
-    downloaded_files = [f for f in os.listdir(download_dir_ta1) if f.endswith('.zip')]
-
-    selected_zip = st.selectbox(
-        "Choose a file to process:",
-        downloaded_files,
-        index=None
-    )
-    process = st.button("process")
-    if selected_zip and process:
-        zip_fullpath = os.path.join(download_dir_ta1, selected_zip)
-        out_dir = os.path.join(preproc_dir_ta1, selected_zip.replace('.zip',''))
-        if not os.path.exists(zip_fullpath.replace('.zip', '')):
-            unzip(zip_fullpath, out_dir)
-        if not os.path.exists(out_dir+'.gpkg'):
-            zip_to_gpkg(out_dir)
-
-    processed_ta1_files = [f for f in os.listdir(preproc_dir_ta1) if f.endswith('.gpkg')]
-    for f in processed_ta1_files:
-        st.write(f)
+        processed_ta1_files = [f for f in os.listdir(preproc_dir_ta1) if f.endswith('.gpkg')]
+        for f in processed_ta1_files:
+            st.write(f)
         
 
 with tab3:

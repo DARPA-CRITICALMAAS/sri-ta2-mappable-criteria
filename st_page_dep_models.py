@@ -4,10 +4,6 @@ import os
 import json
 
 
-deposit_model_dir = st.session_state['deposit_model_dir']
-
-# st.logo(st.session_state['logo'], size="large")
-
 def dict2df(dict, key_desc='characteristic', value_desc='description'):
     df = pd.DataFrame(
         {key_desc: key, value_desc: dict[key]} for key in dict
@@ -20,96 +16,100 @@ def df2dict(df, key='characteristic', value='description'):
     }
     return dict
 
-def set_edit_flag(flag):
-    st.session_state['dep_model_in_edit'] = flag
+@st.dialog(title="Load deposit models", width="large")
+def load_dep_models():
+    files = [fname for fname in os.listdir(deposit_model_dir) if fname.endswith('.json')]
+    files.sort()
+    dep_model_file = st.selectbox(
+        'choose a file',
+        files,
+        index=None,
+    )
+    if st.button("load"):
+        if dep_model_file:
+            full_fname = os.path.join(deposit_model_dir, dep_model_file)
+            with open(full_fname, 'r') as f:
+                dep_model_dict = json.load(f)
+            st.session_state['dep_model_edit'] = {
+                k: dict2df(v) for k, v in dep_model_dict.items()
+            }
+            st.session_state['selected_dep_model_file'] = dep_model_file
+            st.rerun()
+        else:
+            st.warning("you have not choosen a deposit model file")
 
-def dep_model_file_on_change():
-    full_fname = os.path.join(deposit_model_dir, st.session_state['dep_model_file']+'.json')
-    with open(full_fname, 'r') as f:
-        dep_model_dict = json.load(f)
-        st.session_state['dep_model_edit'] = {
-            k: dict2df(v) for k, v in dep_model_dict.items()
+@st.dialog(title="Create new deposit type", width="large")
+def add_new_dep_type():
+    name = st.text_input("name")
+    if name in st.session_state['dep_model_edit'].keys():
+        st.warning(f'deposit type {name} already exists')
+    else:
+        if st.button("create"):
+            st.session_state['dep_model_edit'][name] = dict2df({'characteristic name':'description sentences'})
+            st.rerun()
+
+@st.dialog(title="Save new deposit models", width="large")
+def save_to_new():
+    new_fname = st.text_input("New file name", st.session_state['selected_dep_model_file'])
+    fname_full = os.path.join(deposit_model_dir, new_fname)
+    if os.path.exists(fname_full):
+        st.warning(f"A file named {new_fname} already exists. You can click 'Save' to overwrite it.")
+    else:
+        st.info(f"Click 'Save' button to create a new file {new_fname}")
+    
+    if st.button('Save', icon=":material/save:"):
+        dep_models = {
+            k: df2dict(v) for k, v in st.session_state['dep_model_edit'].items()
         }
-    st.session_state['dep_model_list'] = list(st.session_state['dep_model_edit'].keys())
+        with open(fname_full, 'w') as f:
+            json.dump(dep_models, f)
+        st.rerun()
 
 
-def dep_model_on_edit(dep_type):
-    edits = st.session_state['dep_model_edited_dict']
-    for i, row in edits['edited_rows'].items():
-        for key, val in row.items():
-            st.session_state['dep_model_edit'][dep_type].iloc[i][key] = val
-    if len(edits['added_rows']) > 0:
-        st.session_state['dep_model_edit'][dep_type]=pd.concat([
-                st.session_state['dep_model_edit'][dep_type],
-                pd.DataFrame(edits['added_rows'])
-            ],
-            ignore_index=True
-        )
-    if len(edits['deleted_rows']) > 0:
-        st.session_state['dep_model_edit'][dep_type].drop(edits['deleted_rows'], inplace=True)
-    set_edit_flag(True)
+deposit_model_dir = st.session_state['deposit_model_dir']
 
-st.page_link("st_page_embs.py", label="Back", icon=":material/arrow_back:")
+# st.logo(st.session_state['logo'], size="large")
 
-files = [fname.replace('.json','') for fname in os.listdir(deposit_model_dir) if fname.endswith('.json')]
-files.sort()
+st.page_link("st_page_embs.py", label="Back", icon=":material/undo:")
 
-if not 'dep_model_in_edit' in st.session_state:
-    set_edit_flag(False)
+st.button("load deposit models", type="primary", on_click=load_dep_models)
+if 'selected_dep_model_file' in st.session_state:
+    st.info(f"loaded file **'{st.session_state['selected_dep_model_file']}'**")
 
-option = st.selectbox(
-    'choose a deposit model file',
-    files,
-    index=None,
-    key='dep_model_file',
-    on_change=dep_model_file_on_change,
-    disabled=st.session_state['dep_model_in_edit'],
-)
-
-if not option:
+if 'dep_model_edit' not in st.session_state:
     st.stop()
 
+with st.container(border=True):
+    col1, col2, col3 = st.columns([0.6, 0.2, 0.2])
+    with col1:
+        selected_type = st.selectbox(
+            'choose a deposit type',
+            list(st.session_state['dep_model_edit'].keys()),
+            index=None,
+            label_visibility="collapsed"
+        )
+    with col2:
+        create_dep_model=st.button('create new', use_container_width=True, icon=":material/add:")
+        if create_dep_model:
+            add_new_dep_type()
+    with col3:
+        if selected_type:
+            if st.button(f'delete **{selected_type}**', use_container_width=True, icon=":material/delete:"):
+                del st.session_state['dep_model_edit'][selected_type]
+                st.rerun()
 
-col1, col2 = st.columns([0.3, 0.7])
-with col1:
-    temp_df = pd.DataFrame(
-        data = st.session_state['dep_model_list'],
-        columns=['deposit type'],
-    )
-    selection = st.dataframe(
-        temp_df,
-        hide_index=True,
-        on_select="rerun",
-        selection_mode="single-row",
-        use_container_width=True,
-        height=600,
-    )
-    selected_row = selection['selection']['rows']
-    if len(selected_row) == 1:
-        selected_type = st.session_state['dep_model_list'][selected_row[0]]
-    else:
-        selected_type = None
-with col2:
     if selected_type:
         dep_model_df = st.session_state['dep_model_edit'][selected_type]
         edited_df = st.data_editor(
             dep_model_df,
             num_rows="dynamic",
             hide_index=True,
-            key = 'dep_model_edited_dict',
-            on_change=dep_model_on_edit,
-            args=[selected_type],
             height=600,
+            use_container_width=True,
         )
+        # print(edited_df)
+        if st.button(f'save edits for **{selected_type}**', icon=":material/save:"):
+            edited_df.reset_index(drop=True, inplace=True)
+            st.session_state['dep_model_edit'][selected_type] = edited_df
 
-def save_to_new(fname):
-    fname_full = os.path.join(deposit_model_dir, fname)
-    dep_models = {
-        k: df2dict(v) for k, v in st.session_state['dep_model_edit'].items()
-    }
-    with open(fname_full, 'w') as f:
-        json.dump(dep_models, f)
-    set_edit_flag(False)
-
-new_fname = st.text_input("New file name", st.session_state['dep_model_file'] + '_edited')
-st.button('Save as new', on_click=save_to_new, args=[new_fname+'.json'])
+st.button('I have finished editting', icon=":material/save_as:", type="primary", on_click=save_to_new)

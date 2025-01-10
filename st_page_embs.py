@@ -495,58 +495,56 @@ def push_layers_to_cdr(debug=True):
         placeholder="create a unique tag to differentiate these layers from existing layers",
     )
 
-    cdr_key = st.text_input("Your CDR key:", type="password")
+    # cdr_key = st.text_input("Your CDR key:", st.secrets['cdr_key'], type="password")
     st.write("Click the button below to push:")
 
     if st.button("", key="emb.push_to_cdr", icon=":material/cloud_upload:"):
-        if not cdr_key:
-            st.error("CDR key is empty.")
-        else:
-            with st.container(height=400):
-                for item in st.session_state['temp_gpd_data']:
-                    col_name = item['name']
-                    desc = item['desc']
-                    layer = item['data_filtered'].rename(columns={col_name: 'query_sim'}) # Ten-character limitation to Shapefile attributes
 
-                    metadata = make_metadata(
-                        layer=col_name,
-                        ftype="zip",
-                        deposit_type=st.session_state['emb.dep_type'],
-                        desc=desc,
-                        cma_no=cma_no,
-                        sysver=st.session_state['user_cfg']['vars']['sys_ver'],
-                        height=st.session_state['user_cfg']['params']['raster_height'],
-                        width=st.session_state['user_cfg']['params']['raster_width'])    
-                    content = get_zip_shp(layer, col_name, add_meta=desc)
+        with st.container(height=400):
+            for item in st.session_state['temp_gpd_data']:
+                col_name = item['name']
+                desc = item['desc']
+                layer = item['data_filtered'].rename(columns={col_name: 'query_sim'}) # Ten-character limitation to Shapefile attributes
 
-                    if debug:
-                        with open(os.path.join(st.session_state['tmp_dir'], f'{col_name}.json'), 'w') as f:
-                            json.dump(metadata, f)  
-                        st.download_button(
-                            label=f"cdr.{col_name}",
-                            data=content,
-                            file_name="layers.zip",
-                            mime="application/zip",
-                            icon=":material/download:"
+                metadata = make_metadata(
+                    layer=col_name,
+                    ftype="zip",
+                    deposit_type=st.session_state['emb.dep_type'],
+                    desc=desc,
+                    cma_no=cma_no,
+                    sysver=st.session_state['user_cfg']['vars']['sys_ver'],
+                    height=st.session_state['user_cfg']['params']['raster_height'],
+                    width=st.session_state['user_cfg']['params']['raster_width'])    
+                content = get_zip_shp(layer, col_name, add_meta=desc)
+
+                if debug:
+                    with open(os.path.join(st.session_state['tmp_dir'], f'{col_name}.json'), 'w') as f:
+                        json.dump(metadata, f)  
+                    st.download_button(
+                        label=f"cdr.{col_name}",
+                        data=content,
+                        file_name="layers.zip",
+                        mime="application/zip",
+                        icon=":material/download:"
+                    )
+                else:
+                    if fmt == '.shp':
+                        metadata['format'] = 'shp'
+                        response = push_to_cdr(st.secrets['cdr_key'], metadata, filepath=col_name+".zip", content=content)
+                    elif fmt == '.tiff':
+                        metadata['format'] = 'tif'
+                        boundary = load_boundary(st.session_state['emb.area'])
+                        response = raster_and_push(
+                            layer,
+                            col='query_sim',
+                            boundary=boundary,
+                            metadata=metadata,
+                            url=st.session_state['user_cfg']['endpoints']['cdr_push'],
+                            cdr_key=st.secrets['cdr_key'],
+                            dry_run=False
                         )
-                    else:
-                        if fmt == '.shp':
-                            metadata['format'] = 'shp'
-                            response = push_to_cdr(cdr_key, metadata, filepath=col_name+".zip", content=content)
-                        elif fmt == '.tiff':
-                            metadata['format'] = 'tif'
-                            boundary = load_boundary(st.session_state['emb.area'])
-                            response = raster_and_push(
-                                layer,
-                                col='query_sim',
-                                boundary=boundary,
-                                metadata=metadata,
-                                url=st.session_state['user_cfg']['endpoints']['cdr_push'],
-                                cdr_key=cdr_key,
-                                dry_run=False
-                            )
-                        print(response.status_code, response.content)
-                        st.info(str(response.status_code) + ' ' + str(response.content))
+                    print(response.status_code, response.content)
+                    st.info(str(response.status_code) + ' ' + str(response.content))
 
 def check_shapefile():
     if not st.session_state['emb.shapefile']:
