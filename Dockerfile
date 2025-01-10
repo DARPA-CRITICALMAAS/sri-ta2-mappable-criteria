@@ -26,13 +26,15 @@ ENV PIP_CERT="/etc/ssl/certs/ca-certificates.crt" \
 # <<< end USGS DOI SSL
 
 WORKDIR /home/ubuntu/app/sri-ta2-mappable-criteria
-COPY . .
+COPY polygon_ranking/requirements.txt polygon_ranking/requirements.txt
 
 RUN python3 -m venv /home/ubuntu/venvs/sri-map-synth
 ENV VIRTUAL_ENV="/home/ubuntu/venvs/sri-map-synth"
 ENV PATH="/home/ubuntu/venvs/sri-map-synth/bin:$PATH"
 RUN pip install GDAL==`gdal-config --version`
 RUN pip install -r polygon_ranking/requirements.txt
+
+COPY . .
 
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
