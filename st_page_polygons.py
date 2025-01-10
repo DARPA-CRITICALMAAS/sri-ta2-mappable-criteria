@@ -5,6 +5,7 @@ import subprocess
 import ast
 import zipfile
 import io
+import time
 import geopandas as gpd
 import pandas as pd
 from st_utils import load_boundary
@@ -145,6 +146,54 @@ def gdf_merge_concat(data1, data2, key_cols, cols, desc_col, dissolve=False):
     # data_merge[desc_col] = data_merge[desc_col].apply(lambda x: x.replace('-', ' - '))
     return data_merge
 
+
+@st.fragment
+def job_status_section(job_id_):
+    with st.container(border=True):
+        job_id = st.text_input(
+            "job_id",
+            job_id_,
+            placeholder="job_id",
+            label_visibility="collapsed"
+        )
+
+        if job_id:
+            with st.status("Fetching geological polygons", expanded=True) as status:
+                st.write("Checking CDR job status ...")
+                status = cdr_check_job(job_id, st.secrets['cdr_key'])
+                while status['status'] == 'running':
+                    time.sleep(5)
+                    status = cdr_check_job(job_id, st.secrets['cdr_key'])
+                if status['status'] == 'success':
+                    st.write(":green[Success :material/check:]")
+                else:
+                    st.error(":red[Failed]")
+
+                st.write(f"Downloading result {job_id} from CDR ...")
+                try:
+                    cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
+                    st.write(":green[Success :material/check:]")
+                except Exception as e:
+                    print(e)
+                    st.error(":red[Failed]")
+
+                st.write(f"Extracting polygons {job_id+'.zip'} ...")
+                zip_fullpath = os.path.join(download_dir_ta1, job_id+'.zip')
+                out_dir = os.path.join(preproc_dir_ta1, job_id)
+                if not os.path.exists(zip_fullpath.replace('.zip', '')):
+                    unzip(zip_fullpath, out_dir)
+                if not os.path.exists(out_dir+'.gpkg'):
+                    zip_to_gpkg(out_dir)
+                st.write(":green[Success :material/check:]")
+
+                status.update(
+                    label="Complete!", state="complete", expanded=False
+                )
+        
+        if st.button("check status", icon=":material/sync:"):
+            st.rerun(scope="fragment")
+
+
 # import leafmap.deck as leafmap
 
 # vis_fname = os.path.join(preproc_dir_ta1, "770d5ce1de6744a0bd54c4a109a2ab53.gpkg")
@@ -191,8 +240,7 @@ if selected_polygon:
 tab1, tab2, tab3 = st.tabs([":material/map: Map extraction", ":material/database: SGMC", ":material/upload: Upload"])
 
 with tab1:
-    st.write("Fetch polygon features")
-
+    job_id_ = None
     with st.container(border=True, height=500):
         col1, col2 = st.columns([0.5, 0.5])
 
@@ -254,6 +302,11 @@ with tab1:
             if st.button("Submit", type="primary"):
                 response = cdr_intersect_package(system, version, coordinates_list, st.secrets["cdr_key"])
                 st.info(response)
+                try:
+                    job_id_ = response['job_id']
+                except Exception as e:
+                    print(e)
+
                 st.info("If the job was successfully submitted, please keep a copy of the job_id, which will be required later to retrieve the results.")
         
         with col2:
@@ -285,53 +338,51 @@ with tab1:
                 returned_objects=[],
             )
 
-    st.write("Check job status")
-    with st.container(border=True):
-        job_id = st.text_input(
-            "job_id",
-            placeholder="job_id",
-            label_visibility="collapsed"
-        )
-        check = st.button(
-            "Check"
-        )
-        if check:
-            if job_id:
-                status = cdr_check_job(job_id, st.secrets['cdr_key'])
-                st.write(status)
-            else:
-                st.warning("please provide a valid job_id")
-        download = st.button("download")
-        if download:
-            try:
-                cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
-                # result = cdr_download_job(job_id, cdr_key)
-                # z = zipfile.ZipFile(io.BytesIO(result.content))
-                # z.extractall(download_dir_ta1)
-            except Exception as e:
-                print(e)
-                st.error(f"Failed to fetch job result for {job_id}")
+    st.write("Job status")
+    job_status_section(job_id_)
 
-    st.write("Merge fetched polygons")
-    with st.container(border=True):
-        downloaded_files = [f for f in os.listdir(download_dir_ta1) if f.endswith('.zip')]
-        selected_zip = st.selectbox(
-            "Choose a file:",
-            downloaded_files,
-            index=None
-        )
-        process = st.button("Merge")
-        if selected_zip and process:
-            zip_fullpath = os.path.join(download_dir_ta1, selected_zip)
-            out_dir = os.path.join(preproc_dir_ta1, selected_zip.replace('.zip',''))
-            if not os.path.exists(zip_fullpath.replace('.zip', '')):
-                unzip(zip_fullpath, out_dir)
-            if not os.path.exists(out_dir+'.gpkg'):
-                zip_to_gpkg(out_dir)
 
-        processed_ta1_files = [f for f in os.listdir(preproc_dir_ta1) if f.endswith('.gpkg')]
-        for f in processed_ta1_files:
-            st.write(f)
+    #     check = st.button(
+    #         "Check"
+    #     )
+
+    #     if check:
+    #         if job_id:
+    #             status = cdr_check_job(job_id, st.secrets['cdr_key'])
+    #             st.write(status)
+    #         else:
+    #             st.warning("please provide a valid job_id")
+    #     download = st.button("download")
+    #     if download:
+    #         try:
+    #             cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
+    #             # result = cdr_download_job(job_id, cdr_key)
+    #             # z = zipfile.ZipFile(io.BytesIO(result.content))
+    #             # z.extractall(download_dir_ta1)
+    #         except Exception as e:
+    #             print(e)
+    #             st.error(f"Failed to fetch job result for {job_id}")
+
+    # st.write("Merge fetched polygons")
+    # with st.container(border=True):
+    #     downloaded_files = [f for f in os.listdir(download_dir_ta1) if f.endswith('.zip')]
+    #     selected_zip = st.selectbox(
+    #         "Choose a file:",
+    #         downloaded_files,
+    #         index=None
+    #     )
+    #     process = st.button("Merge")
+    #     if selected_zip and process:
+    #         zip_fullpath = os.path.join(download_dir_ta1, selected_zip)
+    #         out_dir = os.path.join(preproc_dir_ta1, selected_zip.replace('.zip',''))
+    #         if not os.path.exists(zip_fullpath.replace('.zip', '')):
+    #             unzip(zip_fullpath, out_dir)
+    #         if not os.path.exists(out_dir+'.gpkg'):
+    #             zip_to_gpkg(out_dir)
+
+    #     processed_ta1_files = [f for f in os.listdir(preproc_dir_ta1) if f.endswith('.gpkg')]
+    #     for f in processed_ta1_files:
+    #         st.write(f)
 
 with tab2:
 
