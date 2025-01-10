@@ -54,11 +54,10 @@ def delete_dep_models():
     )
     if st.button("delete", icon=":material/delete:"):
         if dep_model_file:
-            st.write("Are you sure?")
-            if st.button("Sure!"):
-                full_fname = os.path.join(deposit_model_dir, dep_model_file)
-                os.remove(full_fname)
-                st.rerun()
+            full_fname = os.path.join(deposit_model_dir, dep_model_file)
+            os.remove(full_fname)
+            st.info(f"file {full_fname} has been delted")
+            st.rerun()
         else:
             st.warning("you have not choosen a deposit model file")
 
