@@ -4,6 +4,11 @@ import os
 import json
 
 
+# st.logo(st.session_state['logo'], size="large")
+
+st.page_link("st_page_embs.py", label="Back", icon=":material/undo:")
+
+
 def dict2df(dict, key_desc='characteristic', value_desc='description'):
     df = pd.DataFrame(
         {key_desc: key, value_desc: dict[key]} for key in dict
@@ -67,10 +72,6 @@ def save_to_new():
 
 
 deposit_model_dir = st.session_state['deposit_model_dir']
-
-# st.logo(st.session_state['logo'], size="large")
-
-st.page_link("st_page_embs.py", label="Back", icon=":material/undo:")
 
 st.button("load deposit models", type="primary", on_click=load_dep_models)
 if 'selected_dep_model_file' in st.session_state:
