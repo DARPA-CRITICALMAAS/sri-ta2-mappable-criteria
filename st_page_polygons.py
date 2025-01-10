@@ -19,7 +19,7 @@ if not st.session_state.get("password_correct", False):
     st.stop()
 
 # st.logo(st.session_state['logo'], size="large")
-
+st.page_link("st_page_embs.py", label="Back", icon=":material/undo:")
 
 download_dir_sgmc = st.session_state["download_dir_sgmc"]
 download_dir_ta1 = st.session_state["download_dir_ta1"]
@@ -145,9 +145,7 @@ def gdf_merge_concat(data1, data2, key_cols, cols, desc_col, dissolve=False):
     # data_merge[desc_col] = data_merge[desc_col].apply(lambda x: x.replace('-', ' - '))
     return data_merge
 
-st.page_link("st_page_embs.py", label="Back", icon=":material/undo:")
-
-import leafmap.deck as leafmap
+# import leafmap.deck as leafmap
 
 # vis_fname = os.path.join(preproc_dir_ta1, "770d5ce1de6744a0bd54c4a109a2ab53.gpkg")
 # vis_data = gpd.read_file(vis_fname)
@@ -321,7 +319,7 @@ with tab1:
 with tab2:
     st.write("Fetch polygon features")
 
-    with st.container(border=True, height=480):
+    with st.container(border=True, height=450):
         col1, col2 = st.columns([0.4, 0.6])
 
         with col1:
@@ -369,7 +367,8 @@ with tab2:
             while len(coordinates_list) == 1:
                 coordinates_list = coordinates_list[0]
 
-            # st.write(coordinates_list)
+            with st.popover("view coordinates"):
+                st.code(coordinates_list)
             # polygon = st.text_input("Extent",
             #     "[[-122.0, 43.0], [-122.0, 35.0], [-114.0, 35.0], [-114.0, 43.0], [-122.0, 43.0]]"
             # )
@@ -401,6 +400,7 @@ with tab2:
             
             markers = st_folium(
                 map,
+                key='folium_map_polygon_page',
                 height=400,
                 use_container_width=True,
                 feature_group_to_add=fg,
@@ -425,10 +425,14 @@ with tab2:
                 st.warning("please provide a valid job_id")
         download = st.button("download")
         if download:
-            cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
-            # result = cdr_download_job(job_id, cdr_key)
-            # z = zipfile.ZipFile(io.BytesIO(result.content))
-            # z.extractall(download_dir_ta1)
+            try:
+                cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
+                # result = cdr_download_job(job_id, cdr_key)
+                # z = zipfile.ZipFile(io.BytesIO(result.content))
+                # z.extractall(download_dir_ta1)
+            except Exception as e:
+                print(e)
+                st.error(f"Failed to fetch job result for {job_id}")
 
     st.write("Merge fetched polygons")
     with st.container(border=True):
