@@ -1,5 +1,6 @@
 **.DS_Store
 **/__pycache__/
+**/.ipynb_checkpoints/
 .streamlit/secrets.toml
 polygon_ranking/TA1
 polygon_ranking/notebooks/*.gpkg
