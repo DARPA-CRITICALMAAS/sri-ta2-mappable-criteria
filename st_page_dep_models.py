@@ -21,7 +21,7 @@ def df2dict(df, key='characteristic', value='description'):
     }
     return dict
 
-@st.dialog(title="Load deposit models", width="large")
+@st.dialog(title="Load file", width="large")
 def load_dep_models():
     files = [fname for fname in os.listdir(deposit_model_dir) if fname.endswith('.json')]
     files.sort()
@@ -30,7 +30,7 @@ def load_dep_models():
         files,
         index=None,
     )
-    if st.button("load"):
+    if st.button("load", icon=":material/restart_alt:"):
         if dep_model_file:
             full_fname = os.path.join(deposit_model_dir, dep_model_file)
             with open(full_fname, 'r') as f:
@@ -40,6 +40,25 @@ def load_dep_models():
             }
             st.session_state['selected_dep_model_file'] = dep_model_file
             st.rerun()
+        else:
+            st.warning("you have not choosen a deposit model file")
+
+@st.dialog(title="Delete file", width="large")
+def delete_dep_models():
+    files = [fname for fname in os.listdir(deposit_model_dir) if fname.endswith('.json')]
+    files.sort()
+    dep_model_file = st.selectbox(
+        'choose a file',
+        files,
+        index=None,
+    )
+    if st.button("delete", icon=":material/delete:"):
+        if dep_model_file:
+            st.write("Are you sure?")
+            if st.button("Sure!"):
+                full_fname = os.path.join(deposit_model_dir, dep_model_file)
+                os.remove(full_fname)
+                st.rerun()
         else:
             st.warning("you have not choosen a deposit model file")
 
@@ -73,7 +92,12 @@ def save_to_new():
 
 deposit_model_dir = st.session_state['deposit_model_dir']
 
-st.button("load deposit models", type="primary", on_click=load_dep_models)
+cols = st.columns(4)
+with cols[0]:
+    st.button("load deposit models", icon=":material/restart_alt:", type="primary", on_click=load_dep_models)
+with cols[1]:
+    st.button("delete deposit models", icon=":material/delete:", on_click=delete_dep_models)
+
 if 'selected_dep_model_file' in st.session_state:
     st.info(f"loaded file **'{st.session_state['selected_dep_model_file']}'**")
 

@@ -23,6 +23,8 @@ from sentence_transformers import SentenceTransformer
 from branca.colormap import linear
 from shapely.geometry import shape
 
+from st_utils import load_boundary
+
 
 st.markdown("""
 <style>
@@ -89,31 +91,31 @@ def load_shape_file(filename):
         data = gpd.read_file(filename)
     return data
 
-@st.cache_data
-def load_boundary(fname):
-    if '[CDR] ' in fname:
-        cma = None
-        for item in st.session_state['cmas']:
-            if item['description'] == fname.replace('[CDR] ', ''):
-                cma = item
-                break
-        if not cma:
-            return None
-        else:
-            area = gpd.GeoDataFrame(
-                {
-                    'description': [cma['description']],
-                    'mineral': [cma['mineral']],
-                },
-                geometry=[shape(item['extent'])],
-                crs=item['crs'],
-            )
-    else:
-        area = load_shape_file(os.path.join(
-            st.session_state['download_dir_user_boundary'],
-            fname
-        ))
-    return area
+# @st.cache_data
+# def load_boundary(fname):
+#     if '[CDR] ' in fname:
+#         cma = None
+#         for item in st.session_state['cmas']:
+#             if item['description'] == fname.replace('[CDR] ', ''):
+#                 cma = item
+#                 break
+#         if not cma:
+#             return None
+#         else:
+#             area = gpd.GeoDataFrame(
+#                 {
+#                     'description': [cma['description']],
+#                     'mineral': [cma['mineral']],
+#                 },
+#                 geometry=[shape(item['extent'])],
+#                 crs=item['crs'],
+#             )
+#     else:
+#         area = load_shape_file(os.path.join(
+#             st.session_state['download_dir_user_boundary'],
+#             fname
+#         ))
+#     return area
 
 @st.cache_resource
 def load_hf_model(model_name="iaross/cm_bert"):
@@ -596,11 +598,6 @@ def prepare_shapefile():
         st.page_link("st_page_polygons.py", label="Create", icon=":material/add:")
     
     # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
-    if 'cmas' not in st.session_state:
-        st.session_state['cmas'] = get_cmas(
-            url = st.session_state['user_cfg']['endpoints']['cdr_cmas'],
-            cdr_key = st.secrets['cdr_key'], size=20
-        ) if 'cdr_key' in st.secrets else []
 
     boundary_files = ['N/A'] \
         + os.listdir(st.session_state['download_dir_user_boundary']) \
@@ -1037,6 +1034,11 @@ def show_buttons():
 
 
 col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
+if 'cmas' not in st.session_state:
+    st.session_state['cmas'] = get_cmas(
+        url = st.session_state['user_cfg']['endpoints']['cdr_cmas'],
+        cdr_key = st.secrets['cdr_key'], size=20
+    ) if 'cdr_key' in st.secrets else []
 
 with col_menu:
     show_buttons()

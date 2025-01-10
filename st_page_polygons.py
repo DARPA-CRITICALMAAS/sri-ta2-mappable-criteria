@@ -7,7 +7,7 @@ import zipfile
 import io
 import geopandas as gpd
 import pandas as pd
-from st_page_embs import load_boundary
+from st_utils import load_boundary
 
 import folium
 import folium.features
@@ -188,9 +188,152 @@ if selected_polygon:
     st.dataframe(st.session_state['polygons'][selected_polygon]['raw'].sample(n=10))
 
 
-tab1, tab2, tab3 = st.tabs([":material/database: SGMC", ":material/map: Map extraction", ":material/upload: Upload"])
+tab1, tab2, tab3 = st.tabs([":material/map: Map extraction", ":material/database: SGMC", ":material/upload: Upload"])
 
 with tab1:
+    st.write("Fetch polygon features")
+
+    with st.container(border=True, height=500):
+        col1, col2 = st.columns([0.5, 0.5])
+
+        with col1:
+            # cdr_key = st.text_input(
+            #     "CDR key",
+            #     st.secrets['cdr_key'],
+            #     placeholder="CDR key",
+            #     type="password",
+            #     label_visibility="collapsed"
+            # )
+
+
+            system = st.text_input("system", "umn-usc-inferlink")
+            version = st.text_input("version", "0.0.5")
+
+            polygon = []
+
+            boundary_files = os.listdir(st.session_state['download_dir_user_boundary']) \
+            + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
+
+            if st.session_state['emb.area'] != 'N/A':
+                ind = boundary_files.index(st.session_state['emb.area'])
+            else:
+                ind = 0
+            
+            cola, colb = st.columns([0.8, 0.2], vertical_alignment="bottom")
+            with cola:
+                area = st.selectbox(
+                    "Extent",
+                    boundary_files,
+                    index = ind,
+                )
+            with colb:
+                boundary = load_boundary(area).to_crs(epsg=4326)
+                coordinates_list = []
+                for geom in boundary.geometry:
+                    if geom.geom_type == 'Polygon':
+                        exterior_coords = list(geom.exterior.coords)  # Outer boundary
+                        interior_coords = [list(ring.coords) for ring in geom.interiors]  # Holes
+                        coordinates_list.append([exterior_coords] + interior_coords)
+                    elif geom.geom_type == 'MultiPolygon':
+                        multi_coords = []
+                        for part in geom.geoms:
+                            exterior_coords = list(part.exterior.coords)  # Outer boundary
+                            interior_coords = [list(ring.coords) for ring in part.interiors]  # Holes
+                            multi_coords.append([exterior_coords] + interior_coords)
+                        coordinates_list.append(multi_coords)
+
+                while len(coordinates_list) == 1:
+                    coordinates_list = coordinates_list[0]
+
+                with st.popover("", icon=":material/location_on:"):
+                    st.code(coordinates_list)
+            # polygon = st.text_input("Extent",
+            #     "[[-122.0, 43.0], [-122.0, 35.0], [-114.0, 35.0], [-114.0, 43.0], [-122.0, 43.0]]"
+            # )
+            # polygon = ast.literal_eval(polygon.strip())        
+            if st.button("Submit", type="primary"):
+                response = cdr_intersect_package(system, version, coordinates_list, st.secrets["cdr_key"])
+                st.info(response)
+                st.info("If the job was successfully submitted, please keep a copy of the job_id, which will be required later to retrieve the results.")
+        
+        with col2:
+            map = folium.Map(
+                location=(38, -100),
+                zoom_start=4,
+                min_zoom=4,
+                max_zoom=10,
+                tiles=st.session_state['user_cfg']['params']['map_base'],
+            )
+            polygon_folium = folium.GeoJson(
+                data=boundary,
+                style_function=lambda _x: {
+                    "fillColor": "#1100f8",
+                    "color": "#1100f8",
+                    "fillOpacity": 0.13,
+                    "weight": 2,
+                }
+            )
+            fg = folium.FeatureGroup(name="Extent")
+            fg.add_child(polygon_folium)
+            
+            markers = st_folium(
+                map,
+                key='folium_map_polygon_page',
+                use_container_width=True,
+                height=400,
+                feature_group_to_add=fg,
+                returned_objects=[],
+            )
+
+    st.write("Check job status")
+    with st.container(border=True):
+        job_id = st.text_input(
+            "job_id",
+            placeholder="job_id",
+            label_visibility="collapsed"
+        )
+        check = st.button(
+            "Check"
+        )
+        if check:
+            if job_id:
+                status = cdr_check_job(job_id, st.secrets['cdr_key'])
+                st.write(status)
+            else:
+                st.warning("please provide a valid job_id")
+        download = st.button("download")
+        if download:
+            try:
+                cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
+                # result = cdr_download_job(job_id, cdr_key)
+                # z = zipfile.ZipFile(io.BytesIO(result.content))
+                # z.extractall(download_dir_ta1)
+            except Exception as e:
+                print(e)
+                st.error(f"Failed to fetch job result for {job_id}")
+
+    st.write("Merge fetched polygons")
+    with st.container(border=True):
+        downloaded_files = [f for f in os.listdir(download_dir_ta1) if f.endswith('.zip')]
+        selected_zip = st.selectbox(
+            "Choose a file:",
+            downloaded_files,
+            index=None
+        )
+        process = st.button("Merge")
+        if selected_zip and process:
+            zip_fullpath = os.path.join(download_dir_ta1, selected_zip)
+            out_dir = os.path.join(preproc_dir_ta1, selected_zip.replace('.zip',''))
+            if not os.path.exists(zip_fullpath.replace('.zip', '')):
+                unzip(zip_fullpath, out_dir)
+            if not os.path.exists(out_dir+'.gpkg'):
+                zip_to_gpkg(out_dir)
+
+        processed_ta1_files = [f for f in os.listdir(preproc_dir_ta1) if f.endswith('.gpkg')]
+        for f in processed_ta1_files:
+            st.write(f)
+
+with tab2:
 
     col1, col2 = st.columns(2)            
     with col1:
@@ -258,7 +401,7 @@ with tab1:
             with st.expander("USGS_SGMC_Shapefiles (sample)"):
                 if os.path.exists(st.session_state['USGS_Shapefile_fname']):
                     tmp_shp = gpd.read_file(st.session_state['USGS_Shapefile_fname'], rows=10)
-                    st.dataframe(tmp_shp)
+                    st.dataframe(tmp_shp.drop(columns=['geometry']))
                 else:
                     tmp_shp = None
 
@@ -313,148 +456,7 @@ with tab1:
                 data = gpd.read_file(out_fname_)
                 data_sample = data.sample(n=20)
                 st.write(f"Output (sample):")
-                st.dataframe(data_sample)
-
-
-with tab2:
-    st.write("Fetch polygon features")
-
-    with st.container(border=True, height=450):
-        col1, col2 = st.columns([0.4, 0.6])
-
-        with col1:
-            # cdr_key = st.text_input(
-            #     "CDR key",
-            #     st.secrets['cdr_key'],
-            #     placeholder="CDR key",
-            #     type="password",
-            #     label_visibility="collapsed"
-            # )
-
-
-            system = st.text_input("system", "umn-usc-inferlink")
-            version = st.text_input("version", "0.0.5")
-
-            polygon = []
-
-            boundary_files = os.listdir(st.session_state['download_dir_user_boundary']) \
-            + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
-
-            if st.session_state['emb.area'] != 'N/A':
-                ind = boundary_files.index(st.session_state['emb.area'])
-            else:
-                ind = 0
-            area = st.selectbox(
-                "Extent",
-                boundary_files,
-                index = ind,
-            )
-            boundary = load_boundary(area).to_crs(epsg=4326)
-            coordinates_list = []
-            for geom in boundary.geometry:
-                if geom.geom_type == 'Polygon':
-                    exterior_coords = list(geom.exterior.coords)  # Outer boundary
-                    interior_coords = [list(ring.coords) for ring in geom.interiors]  # Holes
-                    coordinates_list.append([exterior_coords] + interior_coords)
-                elif geom.geom_type == 'MultiPolygon':
-                    multi_coords = []
-                    for part in geom.geoms:
-                        exterior_coords = list(part.exterior.coords)  # Outer boundary
-                        interior_coords = [list(ring.coords) for ring in part.interiors]  # Holes
-                        multi_coords.append([exterior_coords] + interior_coords)
-                    coordinates_list.append(multi_coords)
-
-            while len(coordinates_list) == 1:
-                coordinates_list = coordinates_list[0]
-
-            with st.popover("view coordinates"):
-                st.code(coordinates_list)
-            # polygon = st.text_input("Extent",
-            #     "[[-122.0, 43.0], [-122.0, 35.0], [-114.0, 35.0], [-114.0, 43.0], [-122.0, 43.0]]"
-            # )
-            # polygon = ast.literal_eval(polygon.strip())        
-            if st.button("Submit"):
-                response = cdr_intersect_package(system, version, coordinates_list, st.secrets["cdr_key"])
-                st.info(response)
-                st.info("If the job was successfully submitted, please keep a copy of the job_id, which will be required later to retrieve the results.")
-        
-        with col2:
-            map = folium.Map(
-                location=(38, -100),
-                zoom_start=4,
-                min_zoom=4,
-                max_zoom=10,
-                tiles=st.session_state['user_cfg']['params']['map_base'],
-            )
-            polygon_folium = folium.GeoJson(
-                data=boundary,
-                style_function=lambda _x: {
-                    "fillColor": "#1100f8",
-                    "color": "#1100f8",
-                    "fillOpacity": 0.13,
-                    "weight": 2,
-                }
-            )
-            fg = folium.FeatureGroup(name="Extent")
-            fg.add_child(polygon_folium)
-            
-            markers = st_folium(
-                map,
-                key='folium_map_polygon_page',
-                height=400,
-                use_container_width=True,
-                feature_group_to_add=fg,
-                returned_objects=[],
-            )
-
-    st.write("Check job status")
-    with st.container(border=True):
-        job_id = st.text_input(
-            "job_id",
-            placeholder="job_id",
-            label_visibility="collapsed"
-        )
-        check = st.button(
-            "Check"
-        )
-        if check:
-            if job_id:
-                status = cdr_check_job(job_id, st.secrets['cdr_key'])
-                st.write(status)
-            else:
-                st.warning("please provide a valid job_id")
-        download = st.button("download")
-        if download:
-            try:
-                cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
-                # result = cdr_download_job(job_id, cdr_key)
-                # z = zipfile.ZipFile(io.BytesIO(result.content))
-                # z.extractall(download_dir_ta1)
-            except Exception as e:
-                print(e)
-                st.error(f"Failed to fetch job result for {job_id}")
-
-    st.write("Merge fetched polygons")
-    with st.container(border=True):
-        downloaded_files = [f for f in os.listdir(download_dir_ta1) if f.endswith('.zip')]
-        selected_zip = st.selectbox(
-            "Choose a file:",
-            downloaded_files,
-            index=None
-        )
-        process = st.button("Merge")
-        if selected_zip and process:
-            zip_fullpath = os.path.join(download_dir_ta1, selected_zip)
-            out_dir = os.path.join(preproc_dir_ta1, selected_zip.replace('.zip',''))
-            if not os.path.exists(zip_fullpath.replace('.zip', '')):
-                unzip(zip_fullpath, out_dir)
-            if not os.path.exists(out_dir+'.gpkg'):
-                zip_to_gpkg(out_dir)
-
-        processed_ta1_files = [f for f in os.listdir(preproc_dir_ta1) if f.endswith('.gpkg')]
-        for f in processed_ta1_files:
-            st.write(f)
-        
+                st.dataframe(data_sample.drop(columns=['geometry']))        
 
 with tab3:
     uploaded_files = st.file_uploader(
