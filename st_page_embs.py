@@ -1000,6 +1000,7 @@ def show_layers():
 
         markers = st_folium(
             m,
+            key='folium_map_emb_page',
             use_container_width=True,
             returned_objects=["all_drawings"],
             feature_group_to_add=fgroups,
