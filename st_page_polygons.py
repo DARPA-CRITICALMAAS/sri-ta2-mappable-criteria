@@ -277,7 +277,7 @@ with tab1:
                 try:
                     boundary = load_boundary(area).to_crs(epsg=4326)
                 except Exception as e:
-                    boundary = ModuleNotFoundError
+                    boundary = None
             with colb:
                 if boundary is not None:
                     coordinates_list = []
