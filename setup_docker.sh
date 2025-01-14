@@ -68,10 +68,11 @@ mkdir -p $HOME/app/workdir-data/preproc/sgmc
 cd $HOME/app/workdir-data/preproc/sgmc/
 wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/SGMC_preproc_default.gpkg
 
-echo "[Deposit model] _Default_.json ..."
+echo "[Deposit model] _Default_.json, GPT_generated.json ..."
 mkdir -p $HOME/app/workdir-data/deposit_models
 cd $HOME/app/workdir-data/deposit_models/
 wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/_Default_.json
+wget https://cmaas-ta2-sri-bucket.s3.us-east-2.amazonaws.com/GPT_generated.json
 
 # envs
 echo "Creating 'secrets.toml'"
