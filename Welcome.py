@@ -130,7 +130,7 @@ for key in ['emb.shapefile', 'emb.desc_col', 'emb.model']:
         st.session_state[key] = None
 
 if not 'emb.area' in st.session_state:
-    st.session_state['emb.area'] = 'N/A'
+    st.session_state['emb.area'] = None
 
 if 'emb.shapefile.ok' not in st.session_state:
     st.session_state['emb.shapefile.ok'] = False

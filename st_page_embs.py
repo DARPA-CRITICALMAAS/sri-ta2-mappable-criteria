@@ -14,6 +14,11 @@ import sys
 import subprocess
 import tempfile
 from datetime import datetime
+
+import rasterio
+from rasterio.features import rasterize
+from matplotlib.colors import to_rgba
+
 import folium
 from streamlit_folium import st_folium
 import leafmap.foliumap as leafmap
@@ -166,6 +171,26 @@ def query_polygons(selected_polygon, boundary_file, desc_col, model_name, query)
         negative_query=None
     )
     return gpd_data
+
+
+def raster_temp_layer(gdf, resolution=500):
+    # Define rasterization parameters
+    bounds = gdf.total_bounds  # Get the bounding box [minx, miny, maxx, maxy]
+    width = int((bounds[2] - bounds[0]) / resolution)
+    height = int((bounds[3] - bounds[1]) / resolution)
+
+    # Create an empty raster
+    transform = rasterio.transform.from_bounds(*bounds, width, height)
+    out_shape = (height, width)
+
+    # Rasterize geometries
+    raster = rasterize(
+        [(geom, 1) for geom in gdf.geometry],  # Assign value 1 to all geometries
+        out_shape=out_shape,
+        transform=transform,
+        fill=0  # Value for empty cells
+    )
+    return raster
 
 
 def generate_style_func(cmap, line_color, weight, attribute, opacity):
@@ -353,6 +378,7 @@ def add_temp_layer(gpd_layer, query_dict, th_min=None, th_default=None, th_max=N
             'th_default': th_default,
             'th_max': th_max,
             'data_filtered': layer_temp_filtered,
+            'cmap': cmap,
             'style': generate_style_func(
                 cmap, '', 0, desc_col_new, 
                 st.session_state['user_cfg']['params']['map_polygon_opacity']
@@ -599,13 +625,14 @@ def prepare_shapefile():
     
     # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
 
-    boundary_files = ['N/A'] \
-        + os.listdir(st.session_state['download_dir_user_boundary']) \
+    boundary_files = os.listdir(st.session_state['download_dir_user_boundary']) \
         + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
     
-    ind = boundary_files.index(st.session_state['emb.area'])
-    # print('emb.area', st.session_state['emb.area'])
-    # print('ind', ind)
+    if not st.session_state['emb.area']:
+        ind = None
+    else:
+        ind = boundary_files.index(st.session_state['emb.area'])
+
     area = st.selectbox(
         "Boundary",
         boundary_files,
@@ -613,6 +640,38 @@ def prepare_shapefile():
         # label_visibility='collapsed'
     )
     set_st('emb.area', area)
+
+    map = folium.Map(
+        location=(38, -100),
+        zoom_start=4,
+        min_zoom=4,
+        max_zoom=10,
+        tiles=st.session_state['user_cfg']['params']['map_base'],
+    )
+
+    fgroups = []
+    if st.session_state['emb.area']:
+        polygon_folium = folium.GeoJson(
+            data=load_boundary(st.session_state['emb.area']),
+            style_function=lambda _x: {
+                "fillColor": "#1100f8",
+                "color": "#1100f8",
+                "fillOpacity": 0.13,
+                "weight": 2,
+            }
+        )
+        fg = folium.FeatureGroup(name="Extent")
+        fg.add_child(polygon_folium)
+        fgroups.append(fg)
+    
+    markers = st_folium(
+        map,
+        key='folium_map_prepare_shapefile',
+        use_container_width=True,
+        height=300,
+        feature_group_to_add=fgroups,
+        returned_objects=[],
+    )
 
     # description column and embedding model
     col_a, col_b = st.columns([0.5, 0.5], vertical_alignment="bottom")
@@ -727,9 +786,12 @@ def generate_new_layers():
             else:
                 dep_models = {}
 
+            dep_model_list = list(dep_models.keys())
+            dep_model_list.sort()
+
             selected_dep_type = st.selectbox(
                 "select deposit type",
-                list(dep_models.keys()),
+                dep_model_list,
                 index=None,
                 label_visibility="collapsed",
                 key='emb.dep_type'
@@ -952,6 +1014,11 @@ def show_layers():
     map_container = st.container(height=800, border=False)
 
     with map_container:
+        with st.popover("layer format"):
+            layer_fmt = st.radio("layer format", ["shape", "raster"], horizontal=True, label_visibility="collapsed")
+            if layer_fmt == "raster":
+                resolution = st.text_input("resolution (meters)", "1000")
+                resolution = int(resolution)
         m = folium.Map(
             location=(38, -100),
             zoom_start=4,
@@ -959,41 +1026,71 @@ def show_layers():
             max_zoom=20,
             tiles=st.session_state['user_cfg']['params']['map_base'],
         )
+
         folium.plugins.Draw(
             export=True,
             draw_options={"polyline":False, "circle":False, "circle":False, "circlemarker":False},
         ).add_to(m)
 
         fgroups = []
+
+        if st.session_state['emb.area']:
+            emb_area = folium.GeoJson(
+                data=load_boundary(st.session_state['emb.area']),
+                style_function=lambda _x: {
+                    "fillColor": "#1100f8",
+                    "color": "#1100f8",
+                    "fillOpacity": 0.0,
+                    "weight": 2,
+                }
+            )
+            fg = folium.FeatureGroup(name="Extent")
+            fg.add_child(emb_area)
+            fgroups.append(fg)
+
         for item in st.session_state['temp_gpd_data']:
             # print(f'drawing layer {item["name"]}')
             # print(item['data_filtered'].columns)
-            fg = folium.FeatureGroup(name=item['name'])
-            # tooltip = folium.GeoJsonTooltip(
-            #     fields=[st.session_state['emb.desc_col'], item['name']],
-            #     aliases=["description", f"query_sim ({item['name']})"],
-            #     localize=True,
-            #     sticky=True,
-            #     labels=True,
-            #     max_width=100,
-            # )
-            tooltip = folium.GeoJsonTooltip(
-                fields=[item['name']],
-                aliases=[f"query_sim ({item['name']})"],
-                localize=True,
-                sticky=True,
-                labels=True,
-                max_width=100,
-            )
-            fg.add_child(
-                folium.GeoJson(
-                    data=item['data_filtered'],
-                    style_function=item['style'],
-                    highlight_function=item['highlight'],
-                    tooltip=tooltip,
+            if layer_fmt == 'shape':
+                fg = folium.FeatureGroup(name=item['name'])
+                fields = list(item['data_filtered'].columns)
+                fields.remove('geometry')
+                fields.remove(st.session_state['emb.desc_col'])
+                tooltip = folium.GeoJsonTooltip(
+                    fields=fields,
+                    # fields=[st.session_state['emb.desc_col'], item['name']],
+                    # aliases=["description", f"query_sim ({item['name']})"],
+                    # fields=[item['name']],
+                    # aliases=[f"query_sim ({item['name']})"],
+                    localize=True,
+                    sticky=True,
+                    labels=True,
+                    max_width=100,
                 )
-            )
-            fgroups.append(fg)
+                fg.add_child(
+                    folium.GeoJson(
+                        data=item['data_filtered'],
+                        style_function=item['style'],
+                        highlight_function=item['highlight'],
+                        tooltip=tooltip,
+                    )
+                )
+                fgroups.append(fg)
+            else:
+                raster_tmp = raster_temp_layer(item['data_filtered'], resolution=resolution)
+                bounds = item['data_filtered'].to_crs(epsg=4326).total_bounds
+                # Define map bounds
+                map_bounds = [[bounds[1], bounds[0]], [bounds[3], bounds[2]]]
+
+                # Add ImageOverlay
+                folium.raster_layers.ImageOverlay(
+                    name=item['name'],
+                    image=raster_tmp,  # Path to your raster image
+                    bounds=map_bounds,
+                    opacity=0.6,
+                    colormap=lambda x: (*to_rgba(item['cmap'](x))[:3], x),
+                    mercator_project=True,
+                ).add_to(m)
 
         markers = st_folium(
             m,
