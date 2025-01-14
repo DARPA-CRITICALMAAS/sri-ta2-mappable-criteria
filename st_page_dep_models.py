@@ -106,9 +106,11 @@ if 'dep_model_edit' not in st.session_state:
 with st.container(border=True):
     col1, col2, col3 = st.columns([0.6, 0.2, 0.2])
     with col1:
+        dep_model_list = list(st.session_state['dep_model_edit'].keys())
+        dep_model_list.sort()
         selected_type = st.selectbox(
             'choose a deposit type',
-            list(st.session_state['dep_model_edit'].keys()),
+            dep_model_list,
             index=None,
             label_visibility="collapsed"
         )
