@@ -262,10 +262,10 @@ with tab1:
             boundary_files = os.listdir(st.session_state['download_dir_user_boundary']) \
             + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
 
-            if st.session_state['emb.area'] != 'N/A':
-                ind = boundary_files.index(st.session_state['emb.area'])
+            if not st.session_state['emb.area']:
+                ind = None
             else:
-                ind = 0
+                ind = boundary_files.index(st.session_state['emb.area'])
             
             cola, colb = st.columns([0.8, 0.2], vertical_alignment="bottom")
             with cola:
