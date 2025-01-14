@@ -412,16 +412,19 @@ def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", heigh
 @st.dialog(title="Upload boundary files", width="large")
 def upload_boundary():
     uploaded_files = st.file_uploader(
-        "Upload your own boundary files:", accept_multiple_files=True
+        "Upload your own boundary files (.zip/.geojson/.gpkg):", accept_multiple_files=True
     )
     for uploaded_file in uploaded_files:
-        bytes_data = uploaded_file.read()
-        outfname = os.path.join(st.session_state['download_dir_user_boundary'], uploaded_file.name)
-        with open(outfname, 'wb') as f:
-            f.write(bytes_data)
+        if not uploaded_file.name.endswith(('.zip', '.geojson', '.gpkg')):
+            st.error(f'{uploaded_file} is not a .zip/.geojson/.gpkg file')
+        else:
+            bytes_data = uploaded_file.read()
+            outfname = os.path.join(st.session_state['download_dir_user_boundary'], uploaded_file.name)
+            with open(outfname, 'wb') as f:
+                f.write(bytes_data)
 
-    if len(uploaded_files) > 0:
-        st.info("Finished uploading. You can now close this window.")
+            if len(uploaded_files) > 0:
+                st.info("Finished uploading. You can now close this window.")
 
 @st.dialog(title="Draw boundaries", width="large")
 def show_drawing_instruction():
@@ -641,6 +644,12 @@ def prepare_shapefile():
     )
     set_st('emb.area', area)
 
+    try:
+        boundary = load_boundary(st.session_state['emb.area'])
+    except Exception as e:
+        boundary = None
+        st.error(f"Failed to load boundary file {st.session_state['emb.area']}")
+
     map = folium.Map(
         location=(38, -100),
         zoom_start=4,
@@ -650,9 +659,9 @@ def prepare_shapefile():
     )
 
     fgroups = []
-    if st.session_state['emb.area']:
+    if boundary is not None:
         polygon_folium = folium.GeoJson(
-            data=load_boundary(st.session_state['emb.area']),
+            data=boundary,
             style_function=lambda _x: {
                 "fillColor": "#1100f8",
                 "color": "#1100f8",
@@ -1034,19 +1043,19 @@ def show_layers():
 
         fgroups = []
 
-        if st.session_state['emb.area']:
-            emb_area = folium.GeoJson(
-                data=load_boundary(st.session_state['emb.area']),
-                style_function=lambda _x: {
-                    "fillColor": "#1100f8",
-                    "color": "#1100f8",
-                    "fillOpacity": 0.0,
-                    "weight": 2,
-                }
-            )
-            fg = folium.FeatureGroup(name="Extent")
-            fg.add_child(emb_area)
-            fgroups.append(fg)
+        # if st.session_state['emb.area']:
+        #     emb_area = folium.GeoJson(
+        #         data=load_boundary(st.session_state['emb.area']),
+        #         style_function=lambda _x: {
+        #             "fillColor": "#1100f8",
+        #             "color": "#1100f8",
+        #             "fillOpacity": 0.0,
+        #             "weight": 2,
+        #         }
+        #     )
+        #     fg = folium.FeatureGroup(name="Extent")
+        #     fg.add_child(emb_area)
+        #     fgroups.append(fg)
 
         for item in st.session_state['temp_gpd_data']:
             # print(f'drawing layer {item["name"]}')

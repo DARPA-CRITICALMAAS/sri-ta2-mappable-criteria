@@ -274,32 +274,36 @@ with tab1:
                     boundary_files,
                     index = ind,
                 )
+                try:
+                    boundary = load_boundary(area).to_crs(epsg=4326)
+                except Exception as e:
+                    boundary = ModuleNotFoundError
             with colb:
-                boundary = load_boundary(area).to_crs(epsg=4326)
-                coordinates_list = []
-                for geom in boundary.geometry:
-                    if geom.geom_type == 'Polygon':
-                        exterior_coords = list(geom.exterior.coords)  # Outer boundary
-                        interior_coords = [list(ring.coords) for ring in geom.interiors]  # Holes
-                        coordinates_list.append([exterior_coords] + interior_coords)
-                    elif geom.geom_type == 'MultiPolygon':
-                        multi_coords = []
-                        for part in geom.geoms:
-                            exterior_coords = list(part.exterior.coords)  # Outer boundary
-                            interior_coords = [list(ring.coords) for ring in part.interiors]  # Holes
-                            multi_coords.append([exterior_coords] + interior_coords)
-                        coordinates_list.append(multi_coords)
+                if boundary is not None:
+                    coordinates_list = []
+                    for geom in boundary.geometry:
+                        if geom.geom_type == 'Polygon':
+                            exterior_coords = list(geom.exterior.coords)  # Outer boundary
+                            interior_coords = [list(ring.coords) for ring in geom.interiors]  # Holes
+                            coordinates_list.append([exterior_coords] + interior_coords)
+                        elif geom.geom_type == 'MultiPolygon':
+                            multi_coords = []
+                            for part in geom.geoms:
+                                exterior_coords = list(part.exterior.coords)  # Outer boundary
+                                interior_coords = [list(ring.coords) for ring in part.interiors]  # Holes
+                                multi_coords.append([exterior_coords] + interior_coords)
+                            coordinates_list.append(multi_coords)
 
-                while len(coordinates_list) == 1:
-                    coordinates_list = coordinates_list[0]
+                    while len(coordinates_list) == 1:
+                        coordinates_list = coordinates_list[0]
 
-                with st.popover("", icon=":material/location_on:"):
-                    st.code(coordinates_list)
+                    with st.popover("", icon=":material/location_on:"):
+                        st.code(coordinates_list)
             # polygon = st.text_input("Extent",
             #     "[[-122.0, 43.0], [-122.0, 35.0], [-114.0, 35.0], [-114.0, 43.0], [-122.0, 43.0]]"
             # )
             # polygon = ast.literal_eval(polygon.strip())        
-            if st.button("Submit", type="primary"):
+            if boundary is not None and st.button("Submit", type="primary"):
                 response = cdr_intersect_package(system, version, coordinates_list, st.secrets["cdr_key"])
                 st.info(response)
                 try:
@@ -307,7 +311,7 @@ with tab1:
                 except Exception as e:
                     print(e)
 
-                st.info("If the job was successfully submitted, please keep a copy of the job_id, which will be required later to retrieve the results.")
+                st.info("Please keep a copy of the job_id, which might be needed later to retrieve the results.")
         
         with col2:
             map = folium.Map(
