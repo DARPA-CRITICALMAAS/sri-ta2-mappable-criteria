@@ -28,7 +28,7 @@ from sentence_transformers import SentenceTransformer
 from branca.colormap import linear
 from shapely.geometry import shape
 
-from st_utils import load_boundary
+from st_utils import load_boundary, load_shape_file
 
 
 st.markdown("""
@@ -88,40 +88,6 @@ def stream_stdout(process):
     else:
         raise st.warning("Job failed!")
 
-@st.cache_data
-def load_shape_file(filename):
-    if filename.endswith('.parquet'):
-        data = gpd.read_parquet(filename)
-    else:
-        data = gpd.read_file(filename)
-    return data
-
-# @st.cache_data
-# def load_boundary(fname):
-#     if '[CDR] ' in fname:
-#         cma = None
-#         for item in st.session_state['cmas']:
-#             if item['description'] == fname.replace('[CDR] ', ''):
-#                 cma = item
-#                 break
-#         if not cma:
-#             return None
-#         else:
-#             area = gpd.GeoDataFrame(
-#                 {
-#                     'description': [cma['description']],
-#                     'mineral': [cma['mineral']],
-#                 },
-#                 geometry=[shape(item['extent'])],
-#                 crs=item['crs'],
-#             )
-#     else:
-#         area = load_shape_file(os.path.join(
-#             st.session_state['download_dir_user_boundary'],
-#             fname
-#         ))
-#     return area
-
 @st.cache_resource
 def load_hf_model(model_name="iaross/cm_bert"):
     return SentenceTransformer(model_name, trust_remote_code=True)
@@ -167,7 +133,7 @@ def query_polygons(selected_polygon, boundary_file, desc_col, model_name, query)
         data_original = data,
         desc_col=None,
         polygon_vec=emb,
-        norm=True,
+        norm=False,
         negative_query=None
     )
     return gpd_data
@@ -577,14 +543,17 @@ def push_layers_to_cdr(debug=True):
                     print(response.status_code, response.content)
                     st.info(str(response.status_code) + ' ' + str(response.content))
 
-def check_shapefile():
-    if not st.session_state['emb.shapefile']:
+def check_shapefile(shapefile, area, desc_col, model_name):
+    if not shapefile:
         st.error("missing **Shape file**")
         return False
-    elif not st.session_state['emb.desc_col']:
+    elif not area:
+        st.error("missing **Boundary file**")
+        return False
+    elif not desc_col:
         st.error("missing **Description column**")
         return False
-    elif not st.session_state['emb.model']:
+    elif not model_name:
         st.error("missing **Embedding model**")
         return False
     else:
@@ -613,9 +582,9 @@ def prepare_shapefile():
             "Shape file",
             polygons,
             index = ind,
+            # key='emb.shapefile',
             label_visibility="collapsed",
         )
-        set_st('emb.shapefile', shapefile)
         # if not polygon_file:
         #     st.warning("Please select a polygon file.")
     # if polygon_file:
@@ -640,15 +609,18 @@ def prepare_shapefile():
         "Boundary",
         boundary_files,
         index = ind,
+        # key='emb.area',
         # label_visibility='collapsed'
     )
-    set_st('emb.area', area)
 
     try:
-        boundary = load_boundary(st.session_state['emb.area'])
+        if area is not None:
+            boundary = load_boundary(area)
+        else:
+            boundary = None
     except Exception as e:
         boundary = None
-        st.error(f"Failed to load boundary file {st.session_state['emb.area']}")
+        st.error(f"Failed to load boundary file {area}")
 
     map = folium.Map(
         location=(38, -100),
@@ -686,16 +658,17 @@ def prepare_shapefile():
     col_a, col_b = st.columns([0.5, 0.5], vertical_alignment="bottom")
 
     with col_a:
-        if not st.session_state['emb.shapefile']:
+        if not shapefile:
             columns = []
         else:
             columns = list(load_shape_file(
-                os.path.join(st.session_state['preproc_dir'], st.session_state['emb.shapefile'])).columns)
+                os.path.join(st.session_state['preproc_dir'], shapefile)).columns)
 
         ind = None
         for col in ['full_desc', 'description']:
             if col in columns:
                 ind = columns.index(col)
+                break
    
         # if not st.session_state['emb.desc_col']:
         #     ind_c = None
@@ -707,29 +680,52 @@ def prepare_shapefile():
             "Description column",
             columns,
             index = ind,
-            disabled= True,
+            # key='emb.desc_col',
         )
-        set_st('emb.desc_col', desc_col)
         # if not desc_col:
         #     st.warning("Please select a description column")
 
     with col_b:
-        models = ["iaross/cm_bert", "Alibaba-NLP/gte-large-en-v1.5"]
+        models = st.session_state['user_cfg']['params']['emb_model_list'] + ["other"]
         if not st.session_state['emb.model']:
             ind=None
+        elif st.session_state['emb.model'] not in models:
+            ind=-1
         else:
             ind = models.index(st.session_state['emb.model'])
         # print('emb.model', st.session_state['emb.model'])
         # print('ind', ind)
-        model_name = st.selectbox(
-            "Embedding model",
-            models,
-            index = ind,
-        )
-        set_st('emb.model', model_name)
+        with st.popover("Embedding model"):
+            model_name = st.radio(
+                "select one embedding model",
+                models,
+                index = ind,
+                label_visibility="collapsed",
+            )
+            model_name_ = st.text_input(
+                "custom model name",
+                st.session_state['emb.model'],
+                placeholder="model name",
+                label_visibility="collapsed",
+                disabled=(model_name!="other")
+            )
+            st.page_link(
+                "https://huggingface.co/models?library=sentence-transformers",
+                label="model list",
+                icon="🤗",
+            )
+            if model_name == "other":
+                model_name = model_name_
         # if not model_name:
         #     st.warning("Please select a model.")
-    st.session_state['emb.shapefile.ok'] = check_shapefile()
+    if check_shapefile(shapefile, area, desc_col, model_name):
+        if st.button("Yes", type="primary"):
+            st.session_state['emb.shapefile.ok'] = True
+            set_st('emb.shapefile', shapefile)
+            set_st('emb.area', area)
+            set_st('emb.desc_col', desc_col)
+            set_st('emb.model', model_name)
+            st.rerun()
             
 
 @st.fragment
@@ -851,16 +847,18 @@ def generate_new_layers():
             elif len(selected_characteristics) == 0:
                 st.error("No characteristics in the deposit model have been selected.")
             else:
-                temp_dep_model = {k: dep_model[k] for k in selected_characteristics}
-                gpd_data = query_polygons(
-                    st.session_state['emb.shapefile'],
-                    st.session_state['emb.area'],
-                    st.session_state['emb.desc_col'],
-                    st.session_state['emb.model'],
-                    query=temp_dep_model
-                )
-                
-                add_temp_layer(gpd_data, query_dict=temp_dep_model)
+                # temp_dep_model = {k: dep_model[k] for k in selected_characteristics}
+                for k in selected_characteristics:
+                    temp_dep_model = {k: dep_model[k]}
+                    gpd_data = query_polygons(
+                        st.session_state['emb.shapefile'],
+                        st.session_state['emb.area'],
+                        st.session_state['emb.desc_col'],
+                        st.session_state['emb.model'],
+                        query=temp_dep_model
+                    )
+                    
+                    add_temp_layer(gpd_data, query_dict=temp_dep_model)
                 st.rerun()
 
 
@@ -1097,6 +1095,7 @@ def show_layers():
                     image=raster_tmp,  # Path to your raster image
                     bounds=map_bounds,
                     opacity=0.6,
+                    pixelated=True,
                     colormap=lambda x: (*to_rgba(item['cmap'](x))[:3], x),
                     mercator_project=True,
                 ).add_to(m)

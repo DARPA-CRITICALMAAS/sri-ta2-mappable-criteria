@@ -13,3 +13,4 @@ raster_height = 500
 raster_width = 500
 map_base = 'Cartodb Positron'
 map_polygon_opacity = 0.8
+emb_model_list = ["iaross/cm_bert", "Alibaba-NLP/gte-large-en-v1.5"]
