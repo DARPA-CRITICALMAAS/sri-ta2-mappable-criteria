@@ -968,7 +968,10 @@ def find_contact():
 
 @st.fragment
 def show_layers():
+
     for ind, item in enumerate(st.session_state['temp_gpd_data']):
+        if ind == 0:
+            st.divider()
 
         col1, col2, col3 = st.columns([0.3, 0.4, 0.3])
 
@@ -995,53 +998,9 @@ def show_layers():
             if st.button("remove", icon=":material/delete:", key=rm_key):
                 st.session_state['temp_gpd_data'].pop(ind)
                 st.rerun(scope="fragment")
-        # m.add_gdf(
-        #     gpd_data_filtered,
-        #     layer_name=item['name'],
-        #     smooth_factor=1,
-        #     style_function=item['style'],
-        #     highlight_function=item['highlight'],
-        #     # info_mode="on_click",
-        # )
-    
-    # with st.expander("Push to CDR"):
-    #     to_view = None
-    #     with st.container(height=400):
-    #         selected_options = []
-    #         select_all = st.checkbox("select all layers")
-
-    #         for i, l in enumerate(layers):
-    #             col1, col2 = st.columns(2)
-    #             with col1:
-    #                 if st.checkbox(l, value=select_all):
-    #                     selected_options.append(l)
-    #             with col2:
-    #                 if st.button("metadata", key=f'tab3.meta.{i}'):
-    #                     to_view = l
-
-    #     if to_view:
-    #         with open(os.path.join(cma_raster_dir, to_view+'.json'), 'r') as f:
-    #             metadata = json.load(f)
-    #         st.json(metadata, expanded=2)
-
-
-    #     cdr_key = st.text_input("Your CDR key:", type="password")
-    #     pushed = st.button("Push to CDR")
-    #     if pushed:
-    #         with st.container(height=200):
-    #             if not cdr_key:
-    #                 st.warning("please provide a CDR key")
-    #             else:
-    #                 for l in selected_options:
-    #                     metadata_fname = os.path.join(cma_raster_dir, l+'.json')
-    #                     tif_fname = os.path.join(cma_raster_dir, l+'.tif')
-
-    #                     with open(metadata_fname, 'r') as f:
-    #                         metadata = json.load(f)
-    #                     st.info(f'pushing {l} to CDR ...')
-    #                     response = push_to_cdr(cdr_key, metadata, tif_fname)
-    #                     st.info(response)
-
+        
+        if ind == len(st.session_state['temp_gpd_data']) - 1:
+            st.divider()
 
     map_container = st.container(height=800, border=False)
 
@@ -1076,8 +1035,7 @@ def show_layers():
         #     fgroups.append(fg)
 
         for item in st.session_state['temp_gpd_data']:
-            # print(f'drawing layer {item["name"]}')
-            # print(item['data_filtered'].columns)
+
             if layer_fmt == 'shape':
                 fg = folium.FeatureGroup(name=item['name'])
                 fields = list(item['data_filtered'].columns)
@@ -1166,7 +1124,6 @@ with col_menu:
 
 with col_map:
     generate_new_layers()
-    st.divider()
     show_layers()
 
 
