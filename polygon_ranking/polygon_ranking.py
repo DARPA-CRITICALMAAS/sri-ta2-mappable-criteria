@@ -198,7 +198,7 @@ def rank_polygon_single_query(query, embed_model, data_original, desc_col=None, 
         query_vec[key] = convert_text_to_vector_hf([query[key]],  embed_model)
         cos_sim[prefix+key] = cosine_similarity(query_vec[key], polygon_vec)[0]
         if norm:
-            cos_sim[prefix+key] = normalize(cos_sim[prefix+key])
+            cos_sim[prefix+key+' (normalized)'] = normalize(cos_sim[prefix+key])
         if negative_query is not None:
             cos_sim[prefix+key] = 0.5 * cos_sim[prefix+key] + 0.5* (1 - cos_sim_neg)
 

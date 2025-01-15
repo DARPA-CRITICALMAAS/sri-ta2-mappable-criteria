@@ -133,7 +133,7 @@ def query_polygons(selected_polygon, boundary_file, desc_col, model_name, query)
         data_original = data,
         desc_col=None,
         polygon_vec=emb,
-        norm=False,
+        norm=True,
         negative_query=None
     )
     return gpd_data
