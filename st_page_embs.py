@@ -375,22 +375,23 @@ def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", heigh
     return metadata
 
 
-@st.dialog(title="Upload boundary files", width="large")
+# @st.dialog(title="Upload boundary files", width="large")
 def upload_boundary():
-    uploaded_files = st.file_uploader(
-        "Upload your own boundary files (.zip/.geojson/.gpkg):", accept_multiple_files=True
-    )
-    for uploaded_file in uploaded_files:
-        if not uploaded_file.name.endswith(('.zip', '.geojson', '.gpkg')):
-            st.error(f'{uploaded_file} is not a .zip/.geojson/.gpkg file')
-        else:
-            bytes_data = uploaded_file.read()
-            outfname = os.path.join(st.session_state['download_dir_user_boundary'], uploaded_file.name)
-            with open(outfname, 'wb') as f:
-                f.write(bytes_data)
+    with st.popover("Upload", icon=":material/upload:"):
+        uploaded_files = st.file_uploader(
+            "Upload your own boundary files (.zip/.geojson/.gpkg):", accept_multiple_files=True
+        )
+        for uploaded_file in uploaded_files:
+            if not uploaded_file.name.endswith(('.zip', '.geojson', '.gpkg')):
+                st.error(f'{uploaded_file} is not a .zip/.geojson/.gpkg file')
+            else:
+                bytes_data = uploaded_file.read()
+                outfname = os.path.join(st.session_state['download_dir_user_boundary'], uploaded_file.name)
+                with open(outfname, 'wb') as f:
+                    f.write(bytes_data)
 
-            if len(uploaded_files) > 0:
-                st.info("Finished uploading. You can now close this window.")
+                if len(uploaded_files) > 0:
+                    st.info("Finished uploading. You can now close this window.")
 
 @st.dialog(title="Draw boundaries", width="large")
 def show_drawing_instruction():
@@ -402,43 +403,44 @@ def show_drawing_instruction():
     )
 
 
-@st.dialog(title="Save boundary", width="large")
+# @st.dialog(title="Save boundary", width="large")
 def save_drawings():
-    if not st.session_state['user_drawings']['features']:
-        st.error("No polygons have been drawn. Please close this window and draw polygons on the map.")
-        return
-    with st.container(height=400):
-        st.write("preview")
-        st.write(st.session_state['user_drawings'])
+    with st.popover("Save drawing", icon=":material/save_as:"):
+        if not st.session_state['user_drawings']['features']:
+            st.error("No polygons have been drawn. Please close this window and draw polygons on the map.")
+            return
+        # with st.container(height=400):
+        #     st.write("preview")
+        #     st.write(st.session_state['user_drawings'])
 
-    existing_fnames = os.listdir(st.session_state['download_dir_user_boundary'])
+        existing_fnames = os.listdir(st.session_state['download_dir_user_boundary'])
 
-    col1, col2 = st.columns(2, vertical_alignment="bottom")
-    with col1:
-        fname = st.text_input(
-            "",
-            placeholder="type in a name for the boundary",
-            label_visibility='collapsed'
-        )
-    with col2:
-        ext = st.selectbox(
-            "extension",
-            [".geojson", ".shp", "gpkg"],
-            index=0,
-            # label_visibility='collapsed',
-            disabled=True,
-        )
+        col1, col2 = st.columns([0.7, 0.3], vertical_alignment="bottom")
+        with col1:
+            fname = st.text_input(
+                "",
+                placeholder="boundary name",
+                label_visibility='collapsed'
+            )
+        with col2:
+            ext = st.selectbox(
+                "extension",
+                [".geojson", ".shp", "gpkg"],
+                index=0,
+                label_visibility='collapsed',
+                disabled=True,
+            )
 
-    if st.button("Save"):
-        if not fname:
-            st.error("Please type in a name")
-        elif fname in existing_fnames:
-            st.error("File already existed")
-        else:
-            fnamefull = os.path.join(st.session_state['download_dir_user_boundary'], fname + ext)
-            with open(fnamefull, 'w') as f:
-                geojson.dump(st.session_state['user_drawings'], f)
-            st.info(f"Boundary file saved as *{fname + ext}*. You can now close this window.")
+        if st.button("Save"):
+            if not fname:
+                st.error("Please type in a name")
+            elif fname in existing_fnames:
+                st.error("File already existed")
+            else:
+                fnamefull = os.path.join(st.session_state['download_dir_user_boundary'], fname + ext)
+                with open(fnamefull, 'w') as f:
+                    geojson.dump(st.session_state['user_drawings'], f)
+                st.info(f"Boundary file saved as *{fname + ext}*. You can now close this window.")
 
 
 @st.dialog(title="Download layers", width="large")
@@ -569,6 +571,7 @@ def prepare_shapefile():
         ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
 
         polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons]
+        polygons.sort()
         
         if not st.session_state['emb.shapefile']:
             ind = None
@@ -583,6 +586,7 @@ def prepare_shapefile():
             polygons,
             index = ind,
             # key='emb.shapefile',
+            placeholder="choose a shapefile",
             label_visibility="collapsed",
         )
         # if not polygon_file:
@@ -599,23 +603,29 @@ def prepare_shapefile():
 
     boundary_files = os.listdir(st.session_state['download_dir_user_boundary']) \
         + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
+    boundary_files.sort()
     
     if not st.session_state['emb.area']:
         ind = None
     else:
         ind = boundary_files.index(st.session_state['emb.area'])
 
-    area = st.selectbox(
-        "Boundary",
-        boundary_files,
-        index = ind,
-        # key='emb.area',
-        # label_visibility='collapsed'
-    )
+    col_x, col_y, col_z = st.columns([0.5, 0.25, 0.25], vertical_alignment="bottom")
+    with col_x:
+        area = st.selectbox(
+            "Boundary",
+            boundary_files,
+            index = ind,
+            placeholder="choose boundary",
+            # key='emb.area',
+            # label_visibility='collapsed'
+        )
 
     try:
         if area is not None:
             boundary = load_boundary(area)
+        # elif st.session_state['user_drawings']['features'] is not None:
+        #     boundary = st.session_state['user_drawings']['features']
         else:
             boundary = None
     except Exception as e:
@@ -629,6 +639,11 @@ def prepare_shapefile():
         max_zoom=10,
         tiles=st.session_state['user_cfg']['params']['map_base'],
     )
+
+    folium.plugins.Draw(
+        export=True,
+        draw_options={"polyline":False, "circle":False, "circle":False, "circlemarker":False, "marker":False},
+    ).add_to(map)
 
     fgroups = []
     if boundary is not None:
@@ -651,8 +666,18 @@ def prepare_shapefile():
         use_container_width=True,
         height=300,
         feature_group_to_add=fgroups,
-        returned_objects=[],
+        returned_objects=["all_drawings"],
+        layer_control=folium.LayerControl(collapsed=False),
     )
+
+    st.session_state['user_drawings'] = {
+        'type': 'FeatureCollection',
+        'features': markers['all_drawings']
+    }
+    with col_y:
+        save_drawings()
+    with col_z:
+        upload_boundary()
 
     # description column and embedding model
     col_a, col_b = st.columns([0.5, 0.5], vertical_alignment="bottom")
@@ -663,6 +688,7 @@ def prepare_shapefile():
         else:
             columns = list(load_shape_file(
                 os.path.join(st.session_state['preproc_dir'], shapefile)).columns)
+            columns.sort()
 
         ind = None
         for col in ['full_desc', 'description']:
@@ -688,7 +714,7 @@ def prepare_shapefile():
     with col_b:
         models = st.session_state['user_cfg']['params']['emb_model_list'] + ["other"]
         if not st.session_state['emb.model']:
-            ind=None
+            ind=0
         elif st.session_state['emb.model'] not in models:
             ind=-1
         else:
@@ -704,22 +730,21 @@ def prepare_shapefile():
             )
             model_name_ = st.text_input(
                 "custom model name",
-                st.session_state['emb.model'],
+                st.session_state['emb.model'] if ind==-1 else None,
                 placeholder="model name",
                 label_visibility="collapsed",
                 disabled=(model_name!="other")
             )
             st.page_link(
                 "https://huggingface.co/models?library=sentence-transformers",
-                label="model list",
-                icon="🤗",
+                label="more models from :hugging_face:",
             )
             if model_name == "other":
                 model_name = model_name_
         # if not model_name:
         #     st.warning("Please select a model.")
     if check_shapefile(shapefile, area, desc_col, model_name):
-        if st.button("Yes", type="primary"):
+        if st.button("Save", type="primary"):
             st.session_state['emb.shapefile.ok'] = True
             set_st('emb.shapefile', shapefile)
             set_st('emb.area', area)
@@ -1034,11 +1059,6 @@ def show_layers():
             tiles=st.session_state['user_cfg']['params']['map_base'],
         )
 
-        folium.plugins.Draw(
-            export=True,
-            draw_options={"polyline":False, "circle":False, "circle":False, "circlemarker":False},
-        ).add_to(m)
-
         fgroups = []
 
         # if st.session_state['emb.area']:
@@ -1104,29 +1124,25 @@ def show_layers():
             m,
             key='folium_map_emb_page',
             use_container_width=True,
-            returned_objects=["all_drawings"],
+            # returned_objects=["all_drawings"],
             feature_group_to_add=fgroups,
-            layer_control=folium.LayerControl(collapsed=False),
+            # layer_control=folium.LayerControl(collapsed=False),
         )
 
-        st.session_state['user_drawings'] = {
-            'type': 'FeatureCollection',
-            'features': markers['all_drawings']
-        }
 
 @st.fragment
 def show_buttons():
     if st.button("", icon=":material/pentagon:", help="Prepare shapefile", type="primary"):
         prepare_shapefile()
 
-    if st.button("", icon=":material/upload:", help="Upload boundary files", type="secondary"):
-        upload_boundary()
+    # if st.button("", icon=":material/upload:", help="Upload boundary files", type="secondary"):
+    #     upload_boundary()
 
-    if st.button("", icon=":material/draw:", help="Draw boundaries", type="secondary"):
-        show_drawing_instruction()
+    # if st.button("", icon=":material/draw:", help="Draw boundaries", type="secondary"):
+    #     show_drawing_instruction()
 
-    if st.button("", icon=":material/save_as:", help="Save boundary", type="secondary"):
-        save_drawings()
+    # if st.button("", icon=":material/save_as:", help="Save boundary", type="secondary"):
+    #     save_drawings()
     
     if st.button("", icon=":material/join_inner:", help="Find contact", type="secondary"):
         find_contact()

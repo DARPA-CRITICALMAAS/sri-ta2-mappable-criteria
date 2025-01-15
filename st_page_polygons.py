@@ -213,7 +213,7 @@ def job_status_section(job_id_):
 sgmc_polygons = [f for f in os.listdir(preproc_dir_sgmc) if f.endswith('.gpkg') or f.endswith('.parquet')]
 ta1_polygons = [f for f in os.listdir(preproc_dir_ta1) if f.endswith('.gpkg')]
 polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons]
-
+polygons.sort()
 # st.write("### Available polygon files")
 selected_polygon = st.selectbox(
     "available shape files",
@@ -261,6 +261,7 @@ with tab1:
 
             boundary_files = os.listdir(st.session_state['download_dir_user_boundary']) \
             + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
+            boundary_files.sort()
 
             if not st.session_state['emb.area']:
                 ind = None
@@ -274,10 +275,13 @@ with tab1:
                     boundary_files,
                     index = ind,
                 )
-                try:
-                    boundary = load_boundary(area).to_crs(epsg=4326)
-                except Exception as e:
+                if area is None:
                     boundary = None
+                else:
+                    try:
+                        boundary = load_boundary(area).to_crs(epsg=4326)
+                    except Exception as e:
+                        boundary = None
             with colb:
                 if boundary is not None:
                     coordinates_list = []
@@ -321,17 +325,18 @@ with tab1:
                 max_zoom=10,
                 tiles=st.session_state['user_cfg']['params']['map_base'],
             )
-            polygon_folium = folium.GeoJson(
-                data=boundary,
-                style_function=lambda _x: {
-                    "fillColor": "#1100f8",
-                    "color": "#1100f8",
-                    "fillOpacity": 0.13,
-                    "weight": 2,
-                }
-            )
             fg = folium.FeatureGroup(name="Extent")
-            fg.add_child(polygon_folium)
+            if boundary is not None:
+                polygon_folium = folium.GeoJson(
+                    data=boundary,
+                    style_function=lambda _x: {
+                        "fillColor": "#1100f8",
+                        "color": "#1100f8",
+                        "fillOpacity": 0.13,
+                        "weight": 2,
+                    }
+                )
+                fg.add_child(polygon_folium)
             
             markers = st_folium(
                 map,
