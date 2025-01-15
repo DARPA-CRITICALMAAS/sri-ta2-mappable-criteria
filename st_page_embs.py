@@ -667,7 +667,6 @@ def prepare_shapefile():
         height=300,
         feature_group_to_add=fgroups,
         returned_objects=["all_drawings"],
-        layer_control=folium.LayerControl(collapsed=False),
     )
 
     st.session_state['user_drawings'] = {
@@ -1084,7 +1083,7 @@ def show_layers():
             use_container_width=True,
             # returned_objects=["all_drawings"],
             feature_group_to_add=fgroups,
-            # layer_control=folium.LayerControl(collapsed=False),
+            layer_control=folium.LayerControl(collapsed=False),
         )
 
 
