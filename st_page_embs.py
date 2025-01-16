@@ -569,8 +569,9 @@ def prepare_shapefile():
     with col1:
         sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
         ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
+        user_polygons = [f for f in os.listdir(st.session_state['download_dir_user']) if f.endswith(('.gpkg', '.zip'))]
 
-        polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons]
+        polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons] + ['user/'+f for f in user_polygons]
         polygons.sort()
         
         if not st.session_state['emb.shapefile']:
@@ -685,8 +686,15 @@ def prepare_shapefile():
         if not shapefile:
             columns = []
         else:
-            columns = list(load_shape_file(
-                os.path.join(st.session_state['preproc_dir'], shapefile)).columns)
+            # columns = list(load_shape_file(
+            #     os.path.join(st.session_state['preproc_dir'], shapefile)).columns)
+            # columns.remove('geometry')
+            columns = load_shape_file(
+                os.path.join(st.session_state['preproc_dir'], shapefile)
+            ).select_dtypes(
+                include=['string']
+            ).columns.tolist()
+
             columns.sort()
 
         ind = None
