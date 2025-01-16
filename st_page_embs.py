@@ -1015,18 +1015,20 @@ def show_layers():
                         hist_b[i] = 0
 
                 data_hist = pd.DataFrame(
-                    {'low': hist_a, 'high':hist_b},
+                    {'full': hist_a, 'filter':hist_b},
                     index=["{:.2f}".format(x) for x in np.round(bin_edges, 2)[1:]]
                 )
                 st.bar_chart(
                     data=data_hist,
                     x_label=item['name'],
                     y_label='density',
-                    y=['low', 'high'],
+                    y=['full', 'filter'],
                     height=300,
                     use_container_width=True,
                     color=[item['cmap'](0.8), item['cmap'](0.2)],
                 )
+                st.write("full: {:.3f} ~ {:.3f}".format(item['orig_values'].min(), item['orig_values'].max()))
+                st.write("filter: {:.3f} ~ {:.3f}".format(temp_min, temp_max))
 
         with col4:
             rm_key = f"emb.rm.{item['id']}"
