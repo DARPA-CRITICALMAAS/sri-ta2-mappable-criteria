@@ -519,6 +519,7 @@ with tab2:
                 st.dataframe(data_sample.drop(columns=['geometry']))        
 
 with tab3:
+    st.info("Your uploaded shape file should contain **a column of textual descriptions (for all rows)**. Please also remember to manually select this column for the **'Description column'** field in the **'Preapare shapefile'** window.")
     uploaded_files = st.file_uploader(
         "Upload your own .gpkg files:", accept_multiple_files=True
     )
