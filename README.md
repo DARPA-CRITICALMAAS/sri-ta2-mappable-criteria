@@ -206,3 +206,7 @@ You can find more details about it from the steps below.
 To access QueryPlot, open a browser and type in the IP address of your EC2 instance and the port number (e.g., `http://your.ec2.ip.address:8501`)
 
 Follow the instructions in [user manual](https://docs.google.com/document/d/1WTDQBVn73pqW3YsGDRtNmBFUjEyRdCFV) or watch this 8-minute [video](https://drive.google.com/file/d/1eSYXvgU6Voj8XXoXC2xKEyTE8t9aZun6) to learn how to use QueryPlot.
+
+### License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
