@@ -972,7 +972,7 @@ def show_layers():
         if ind == 0:
             st.divider()
 
-        col1, col2, col3 = st.columns([0.3, 0.4, 0.3])
+        col1, col2, col3, col4 = st.columns([0.2, 0.4, 0.1, 0.1])
 
         with col1:
             # pop_key = f"emb.pop.{item['id']}"
@@ -993,6 +993,42 @@ def show_layers():
             )
 
         with col3:
+            with st.popover("", icon=":material/bar_chart:"):
+                hist, bin_edges = np.histogram(
+                    item['orig_values'],
+                    bins=st.session_state['user_cfg']['params']['histogram_bins']
+                )
+                hist = hist / hist.sum()
+                th_min, th_max = st.session_state[slider_key]
+                temp_min = np.percentile(item['orig_values'], th_min)
+                temp_max = np.percentile(item['orig_values'], th_max)
+                hist_a = hist.copy()  # out of filter range
+                hist_b = hist.copy()  # within filter range
+                for i, edge in enumerate(bin_edges):
+                    if i == len(hist):
+                        break
+                    if edge < temp_min:
+                        hist_b[i] = 0
+                    elif temp_min <= edge and edge < temp_max:
+                        hist_a[i] = 0
+                    else:  # th_max <= edge
+                        hist_b[i] = 0
+
+                data_hist = pd.DataFrame(
+                    {'low': hist_a, 'high':hist_b},
+                    index=["{:.2f}".format(x) for x in np.round(bin_edges, 2)[1:]]
+                )
+                st.bar_chart(
+                    data=data_hist,
+                    x_label=item['name'],
+                    y_label='density',
+                    y=['low', 'high'],
+                    height=300,
+                    use_container_width=True,
+                    color=[item['cmap'](0.8), item['cmap'](0.2)],
+                )
+
+        with col4:
             rm_key = f"emb.rm.{item['id']}"
             if st.button("remove", icon=":material/delete:", key=rm_key):
                 st.session_state['temp_gpd_data'].pop(ind)
