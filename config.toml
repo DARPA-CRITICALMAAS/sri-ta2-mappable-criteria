@@ -6,6 +6,11 @@ data_dir = '../workdir-data'
 cdr_cmas = 'https://api.cdr.land/v1/prospectivity/cmas'
 cdr_push = 'https://api.cdr.land/v1/prospectivity/datasource'
 
+[urls]
+user_instruction = "https://docs.google.com/document/d/1WTDQBVn73pqW3YsGDRtNmBFUjEyRdCFV/edit?usp=sharing&ouid=117471927435465203891&rtpof=true&sd=true"
+faq = "https://docs.google.com/document/d/1H6GB90ILtwsXyLZ-o2loyH_RucqxJfhh/edit?usp=sharing&ouid=117471927435465203891&rtpof=true&sd=true"
+video = "https://drive.google.com/file/d/11-qpIgp9z8jPqdnxUKnW4pbEVvyGs9ep/view?usp=sharing"
+
 [params]
 percentile_threshold_min = 80
 percentile_threshold_default = 90

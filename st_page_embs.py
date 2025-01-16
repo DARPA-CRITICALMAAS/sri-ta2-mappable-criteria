@@ -1124,6 +1124,11 @@ def show_layers():
             layer_control=folium.LayerControl(collapsed=False),
         )
 
+@st.dialog("More information")
+def show_info():
+    st.page_link(st.session_state['user_cfg']['urls']['user_instruction'],label="User instructions", icon=":material/description:")
+    st.page_link(st.session_state['user_cfg']['urls']['faq'],label="FAQ", icon=":material/quiz:")
+    st.page_link(st.session_state['user_cfg']['urls']['video'],label="Intro video", icon=":material/play_circle:")
 
 @st.fragment
 def show_buttons():
@@ -1147,6 +1152,9 @@ def show_buttons():
 
     if st.button("", icon=":material/cloud_upload:", help="Push layers to CDR", type="primary"):
         push_layers_to_cdr(debug=False)
+    
+    if st.button("", icon=":material/help:", help="Help", type="secondary"):
+        show_info()
 
 
 col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
