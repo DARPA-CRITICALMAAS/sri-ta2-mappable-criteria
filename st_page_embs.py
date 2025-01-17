@@ -1163,6 +1163,7 @@ def show_info():
     st.page_link(st.session_state['user_cfg']['urls']['user_instruction'],label="User instructions", icon=":material/description:")
     st.page_link(st.session_state['user_cfg']['urls']['faq'],label="FAQ", icon=":material/quiz:")
     st.page_link(st.session_state['user_cfg']['urls']['video'],label="Intro video", icon=":material/play_circle:")
+    st.page_link(st.session_state['user_cfg']['urls']['github'], label="Github", icon=":material/code:")
 
 @st.fragment
 def show_buttons():
