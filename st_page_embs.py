@@ -30,7 +30,16 @@ from shapely.geometry import shape
 
 from st_utils import load_boundary, load_shape_file
 
+hide_elements = """
+        <style>
+            div[data-testid="stSliderTickBarMin"],
+            div[data-testid="stSliderTickBarMax"] {
+                display: none;
+            }
+        </style>
+"""
 
+st.markdown(hide_elements, unsafe_allow_html=True)
 st.markdown("""
 <style>
 	[data-testid="stDecoration"] {
@@ -74,6 +83,23 @@ if 'colormap' not in st.session_state:
 
 def random_letters(length):
     return ''.join(random.sample(string.ascii_lowercase,length))
+
+
+# Function to calculate average word length for string columns
+def calculate_avg_word_length(df):
+    # Select only string columns
+    string_columns = df.select_dtypes(include=['object', 'string'])
+    
+    # Calculate the average word length for each string column
+    avg_word_lengths = {}
+    for col in string_columns.columns:
+        avg_length = string_columns[col].apply(lambda x: len(str(x).split())).mean()
+        avg_word_lengths[col] = avg_length
+    
+    # Find the column with the maximum average word length
+    max_avg_col = max(avg_word_lengths, key=avg_word_lengths.get)
+    
+    return string_columns.columns.tolist(), max_avg_col
 
 
 def stream_stdout(process):
@@ -289,7 +315,7 @@ def get_zip_shp_multiple(gdfs, names, descriptions):
             for gdf, name, desc in zip(gdfs, names, descriptions):
                 st.info(f"Preparing layer **{name}** ...")
                 get_zip_shp(gdf, name, add_meta=desc, zf=zf)
-                st.info("done!")
+                st.info(":green[Success :material/check_circle:]")
         # Move the cursor to the beginning of the zip buffer
         zip_buffer.seek(0)
     return zip_buffer
@@ -309,6 +335,8 @@ def add_temp_layer(gpd_layer, query_dict, th_min=None, th_default=None, th_max=N
         # cols_to_del = list(query_dict.keys())
         # cols_to_del.remove(desc_col)
         layer_temp = gpd_layer.copy().to_crs('ESRI:102008')
+        # layer_temp['simplified_geometry'] = layer_temp.geometry.simplify(tolerance=10)
+        # layer_temp.set_geometry('simplified_geometry')
 
         layer_temp.rename(columns={desc_col: desc_col_new}, inplace=True)
         # layer_temp.drop(columns=cols_to_del, inplace=True)
@@ -377,7 +405,7 @@ def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", heigh
 
 # @st.dialog(title="Upload boundary files", width="large")
 def upload_boundary():
-    with st.popover("Upload", icon=":material/upload:"):
+    with st.popover("", icon=":material/upload:", help="upload boundary files", use_container_width=True):
         uploaded_files = st.file_uploader(
             "Upload your own boundary files (.zip/.geojson/.gpkg):", accept_multiple_files=True
         )
@@ -405,7 +433,7 @@ def show_drawing_instruction():
 
 # @st.dialog(title="Save boundary", width="large")
 def save_drawings():
-    with st.popover("Save drawing", icon=":material/save_as:"):
+    with st.popover("", icon=":material/save_as:", help="draw a polygon and save it", use_container_width=True):
         if not st.session_state['user_drawings']['features']:
             st.error("No polygons have been drawn. Please close this window and draw polygons on the map.")
             return
@@ -446,7 +474,7 @@ def save_drawings():
 @st.dialog(title="Download layers", width="large")
 def download_layers():
     if len(st.session_state['temp_gpd_data']) == 0:
-        st.error("There are no text embedding layers generated yet.")
+        st.error("Please generate evidence layers first.")
         return
     
     # zip_buffer = get_zip_geoj(layers, names)
@@ -465,8 +493,9 @@ def download_layers():
     zip_buffer = get_zip_shp_multiple(layers, names, descriptions)
     st.write("Click the button below to download:")
     st.download_button(
-        label="",
+        label="Download",
         data=zip_buffer,
+        type="primary",
         file_name="layers.zip",
         mime="application/zip",
         icon=":material/download:"
@@ -476,7 +505,7 @@ def download_layers():
 @st.dialog(title="Push layers to CDR", width="large")
 def push_layers_to_cdr(debug=True):
     if len(st.session_state['temp_gpd_data']) == 0:
-        st.error("There are no text embedding layers generated yet.")
+        st.error("Please generate evidence layers first.")
         return
     
     st.write([item['name'] for item in st.session_state['temp_gpd_data']])
@@ -497,7 +526,7 @@ def push_layers_to_cdr(debug=True):
     # cdr_key = st.text_input("Your CDR key:", st.secrets['cdr_key'], type="password")
     st.write("Click the button below to push:")
 
-    if st.button("", key="emb.push_to_cdr", icon=":material/cloud_upload:"):
+    if st.button("Push", key="emb.push_to_cdr", icon=":material/cloud_upload:", type="primary"):
 
         with st.container(height=400):
             for item in st.session_state['temp_gpd_data']:
@@ -543,7 +572,12 @@ def push_layers_to_cdr(debug=True):
                             dry_run=False
                         )
                     print(response.status_code, response.content)
-                    st.info(str(response.status_code) + ' ' + str(response.content))
+                    st.info(str(response.content))
+                    if response.status_code == 200:
+                        st.info(":green[Success :material/check_circle:]")
+                    else:
+                        st.error(":red[Failed :material/cancel:]")
+
 
 def check_shapefile(shapefile, area, desc_col, model_name):
     if not shapefile:
@@ -565,6 +599,7 @@ def check_shapefile(shapefile, area, desc_col, model_name):
 
 @st.dialog("Prepare shapefile", width="large")
 def prepare_shapefile():
+    # Shapefile selection
     col1, col2 = st.columns([0.8,0.2], vertical_alignment="center")
     with col1:
         sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
@@ -579,9 +614,6 @@ def prepare_shapefile():
         else:
             ind = polygons.index(st.session_state['emb.shapefile'])
 
-        # print('emb.shapefile', st.session_state['emb.shapefile'])
-        # print('ind', ind)
-
         shapefile = st.selectbox(
             "Shape file",
             polygons,
@@ -590,18 +622,64 @@ def prepare_shapefile():
             placeholder="choose a shapefile",
             label_visibility="collapsed",
         )
-        # if not polygon_file:
-        #     st.warning("Please select a polygon file.")
-    # if polygon_file:
-    #     selected_polygon = os.path.join(st.session_state['preproc_dir'], polygon_file)
-    # else:
-    #     selected_polygon = None
 
     with col2:
         st.page_link("st_page_polygons.py", label="Create", icon=":material/add:")
-    
-    # boundary_files = ['N/A'] + os.listdir(st.session_state['boundaries_dir'])
 
+    # Description column and embedding model
+    col_a, col_b = st.columns([0.7, 0.3], vertical_alignment="bottom")
+
+    with col_a:
+        if not shapefile:
+            columns = []
+            ind = None
+        else:
+            tmp_df = load_shape_file(
+                os.path.join(st.session_state['preproc_dir'], shapefile)
+            ).drop(columns='geometry')
+
+            columns, max_avg_col = calculate_avg_word_length(tmp_df)
+            columns.sort()
+            ind = columns.index(max_avg_col)
+
+        desc_col = st.selectbox(
+            "Description column",
+            columns,
+            index = ind,
+            # key='emb.desc_col',
+        )
+
+    with col_b:
+        models = st.session_state['user_cfg']['params']['emb_model_list'] + ["other"]
+        if not st.session_state['emb.model']:
+            ind=0
+        elif st.session_state['emb.model'] not in models:
+            ind=-1
+        else:
+            ind = models.index(st.session_state['emb.model'])
+
+        with st.popover("Embedding model", icon=":material/network_node:", use_container_width=True):
+            model_name = st.radio(
+                "select one embedding model",
+                models,
+                index = ind,
+                label_visibility="collapsed",
+            )
+            model_name_ = st.text_input(
+                "custom model name",
+                st.session_state['emb.model'] if ind==-1 else None,
+                placeholder="model name",
+                label_visibility="collapsed",
+                disabled=(model_name!="other")
+            )
+            st.page_link(
+                "https://huggingface.co/models?library=sentence-transformers",
+                label="more models from :hugging_face:",
+            )
+            if model_name == "other":
+                model_name = model_name_
+
+    # Boundary file
     boundary_files = os.listdir(st.session_state['download_dir_user_boundary']) \
         + ['[CDR] ' + item['description'] for item in st.session_state['cmas']]
     boundary_files.sort()
@@ -611,7 +689,7 @@ def prepare_shapefile():
     else:
         ind = boundary_files.index(st.session_state['emb.area'])
 
-    col_x, col_y, col_z = st.columns([0.5, 0.25, 0.25], vertical_alignment="bottom")
+    col_x, col_y, col_z = st.columns([0.8, 0.1, 0.1], vertical_alignment="bottom")
     with col_x:
         area = st.selectbox(
             "Boundary",
@@ -679,77 +757,7 @@ def prepare_shapefile():
     with col_z:
         upload_boundary()
 
-    # description column and embedding model
-    col_a, col_b = st.columns([0.5, 0.5], vertical_alignment="bottom")
-
-    with col_a:
-        if not shapefile:
-            columns = []
-        else:
-            # columns = list(load_shape_file(
-            #     os.path.join(st.session_state['preproc_dir'], shapefile)).columns)
-            # columns.remove('geometry')
-            columns = load_shape_file(
-                os.path.join(st.session_state['preproc_dir'], shapefile)
-            ).select_dtypes(
-                include=['string']
-            ).columns.tolist()
-
-            columns.sort()
-
-        ind = None
-        for col in ['full_desc', 'description']:
-            if col in columns:
-                ind = columns.index(col)
-                break
-   
-        # if not st.session_state['emb.desc_col']:
-        #     ind_c = None
-        # else:
-        #     ind_c = columns.index(st.session_state["emb.desc_col"])
-        # print('emb.desc_col', st.session_state['emb.desc_col'])
-        # print('ind', ind)
-        desc_col = st.selectbox(
-            "Description column",
-            columns,
-            index = ind,
-            # key='emb.desc_col',
-        )
-        # if not desc_col:
-        #     st.warning("Please select a description column")
-
-    with col_b:
-        models = st.session_state['user_cfg']['params']['emb_model_list'] + ["other"]
-        if not st.session_state['emb.model']:
-            ind=0
-        elif st.session_state['emb.model'] not in models:
-            ind=-1
-        else:
-            ind = models.index(st.session_state['emb.model'])
-        # print('emb.model', st.session_state['emb.model'])
-        # print('ind', ind)
-        with st.popover("Embedding model"):
-            model_name = st.radio(
-                "select one embedding model",
-                models,
-                index = ind,
-                label_visibility="collapsed",
-            )
-            model_name_ = st.text_input(
-                "custom model name",
-                st.session_state['emb.model'] if ind==-1 else None,
-                placeholder="model name",
-                label_visibility="collapsed",
-                disabled=(model_name!="other")
-            )
-            st.page_link(
-                "https://huggingface.co/models?library=sentence-transformers",
-                label="more models from :hugging_face:",
-            )
-            if model_name == "other":
-                model_name = model_name_
-        # if not model_name:
-        #     st.warning("Please select a model.")
+    # Check selections
     if check_shapefile(shapefile, area, desc_col, model_name):
         if st.button("Save", type="primary"):
             st.session_state['emb.shapefile.ok'] = True
@@ -785,11 +793,11 @@ def generate_new_layers():
 
         if clicked:
             if not 'emb.shapefile.ok' in st.session_state or not st.session_state['emb.shapefile.ok']:
-                st.error("Please select shape files first.")
+                st.error("Please go to :blue-background[:material/menu: Menu] -> :blue-background[:material/pentagon: Prepare shapefile] to select shapefile and other options.")
             elif not query:
-                st.error("Please type in a query in the search box.")
+                st.error("Please type in a **query** in the search box.")
             elif not query_name:
-                st.error("Please type in a short name for the query.")
+                st.error("Please type in a **short name** for the query.")
             else:
                 temp_query = {query_name: query}
                 gpd_data = query_polygons(
@@ -804,7 +812,7 @@ def generate_new_layers():
 
     with tab2:
         # compute new layers
-        cola, colb, colc = st.columns([0.4, 0.4, 0.2], vertical_alignment="center")
+        cola, colb, colc = st.columns([0.2, 0.6, 0.2], vertical_alignment="center")
         with cola:
             files = [fname.replace('.json', '') for fname in os.listdir(st.session_state['deposit_model_dir']) if fname.endswith('.json')]
             files.sort()
@@ -830,6 +838,7 @@ def generate_new_layers():
                 "select deposit type",
                 dep_model_list,
                 index=None,
+                placeholder="select a deposit type",
                 label_visibility="collapsed",
                 key='emb.dep_type'
             )
@@ -847,21 +856,22 @@ def generate_new_layers():
             data_df = pd.DataFrame(
                 [{'process': False, 'Characteristic':k, 'Description':v} for k, v in dep_model.items()]
             )
-            edited_df = st.data_editor(
-                data_df,
-                column_config = {
-                    'process': st.column_config.CheckboxColumn(
-                        "Generate?",
-                        width="medium",
-                        help="Each selected characteristic will be processed to generate a corresponding text embedding layer.",
-                        default=False,
-                    )
-                },
-                disabled=['Characteristic', 'Description'],
-                hide_index=True,
-                use_container_width=True,
-            )
-            selected_characteristics = edited_df[edited_df['process']]['Characteristic'].tolist()
+            with st.popover("Deposit model characteristics", icon=":material/list:", use_container_width=True):
+                edited_df = st.data_editor(
+                    data_df,
+                    column_config = {
+                        'process': st.column_config.CheckboxColumn(
+                            "Generate?",
+                            width="medium",
+                            help="Each selected characteristic will be processed to generate an evidence layer.",
+                            default=False,
+                        )
+                    },
+                    disabled=['Characteristic', 'Description'],
+                    hide_index=True,
+                    use_container_width=True,
+                )
+                selected_characteristics = edited_df[edited_df['process']]['Characteristic'].tolist()
             
         # cma_label = st.text_input("Create a lable")
 
@@ -871,13 +881,13 @@ def generate_new_layers():
         clicked_run = st.button("Search", icon=":material/search:", key="emb.dep_model_search", type="primary")
         if clicked_run:
             if not 'emb.shapefile.ok' in st.session_state or not st.session_state['emb.shapefile.ok']:
-                st.error("Please select shape files first.")
+                st.error("Please go to :blue-background[:material/menu: Menu] -> :blue-background[:material/pentagon: Prepare shapefile] to select shapefile and other options.")
             elif not st.session_state['emb.dep_model_file']:
-                st.error("No deposit model file has been selected.")
+                st.error("Please select a deposit model file.")
             elif not st.session_state['emb.dep_type']:
-                st.error("No deposit type has been selected.")
+                st.error("Please **select a deposit type**.")
             elif len(selected_characteristics) == 0:
-                st.error("No characteristics in the deposit model have been selected.")
+                st.error("Please select the characteristics to query by checking boxes in left-most column of :blue-background[:material/list: Deposit model characteristics]")
             else:
                 # temp_dep_model = {k: dep_model[k] for k in selected_characteristics}
                 for k in selected_characteristics:
@@ -922,7 +932,7 @@ def find_contact():
     )
     buffer2 = int(buffer2)
 
-    if st.button("", icon=":material/join_inner:"):
+    if st.button("Find", icon=":material/join_inner:", type="primary"):
         if (not layer1) or (not layer2):
             st.error("Please select the two layers")
         elif layer1 == layer2:
@@ -973,164 +983,180 @@ def find_contact():
             st.rerun()
 
 
-@st.fragment
-def show_layers():
+@st.dialog("Layer info", width="large")
+def show_layer_info(slider_key, item):
+    st.write("#### Query name")
+    st.write(item['name'])
+    st.write("#### Query description")
+    st.write(item['desc'])
+    st.write("#### Distribution")
+    hist, bin_edges = np.histogram(
+        item['orig_values'],
+        bins=st.session_state['user_cfg']['params']['histogram_bins']
+    )
+    hist = hist / hist.sum()
+    th_min, th_max = st.session_state[slider_key]
+    temp_min = np.percentile(item['orig_values'], th_min)
+    temp_max = np.percentile(item['orig_values'], th_max)
+    hist_a = hist.copy()  # out of filter range
+    hist_b = hist.copy()  # within filter range
+    for i, edge in enumerate(bin_edges):
+        if i == len(hist):
+            break
+        if edge < temp_min:
+            hist_b[i] = 0
+        elif temp_min <= edge and edge < temp_max:
+            hist_a[i] = 0
+        else:  # th_max <= edge
+            hist_b[i] = 0
 
+    data_hist = pd.DataFrame(
+        {'full': hist_a, 'filter':hist_b},
+        index=["{:.2f}".format(x) for x in np.round(bin_edges, 2)[1:]]
+    )
+    st.bar_chart(
+        data=data_hist,
+        x_label=f"similarity scores",
+        y_label='density',
+        y=['full', 'filter'],
+        height=300,
+        use_container_width=True,
+        color=[item['cmap'](0.8), item['cmap'](0.2)],
+    )
+    st.write("full range: {:.3f} ~ {:.3f}".format(item['orig_values'].min(), item['orig_values'].max()))
+    st.write("filter range: {:.3f} ~ {:.3f}".format(temp_min, temp_max))
+
+
+def show_layer_control():
     for ind, item in enumerate(st.session_state['temp_gpd_data']):
-        if ind == 0:
-            st.divider()
-
-        col1, col2, col3, col4 = st.columns([0.2, 0.4, 0.1, 0.1])
-
-        with col1:
-            # pop_key = f"emb.pop.{item['id']}"
-            with st.popover(item['name'], icon=":material/visibility:"):
-                st.write("_Description_:", item['desc'])
-        
-        with col2:
-            slider_key = f"emb.slider.{item['id']}"
-            st.slider(
-                item['name'],
-                min_value = item['th_min'],
-                max_value = item['th_max'],
-                value = (item['th_default'], item['th_max']),
-                format="%d %%",
-                key=slider_key,
-                on_change=generate_slider_on_change(slider_key, item['name']),
-                label_visibility='collapsed'
-            )
-
-        with col3:
-            with st.popover("", icon=":material/bar_chart:"):
-                hist, bin_edges = np.histogram(
-                    item['orig_values'],
-                    bins=st.session_state['user_cfg']['params']['histogram_bins']
+        with st.container(border=True):
+            # st.write(item['name'])
+            col_slider, col_info, col_del = st.columns([0.8, 0.1, 0.1], vertical_alignment="bottom")
+            with col_slider:
+                slider_key = f"emb.slider.{item['id']}"
+                st.slider(
+                    item['name'],
+                    min_value = item['th_min'],
+                    max_value = item['th_max'],
+                    value = (item['th_default'], item['th_max']),
+                    format="%d %%",
+                    key=slider_key,
+                    on_change=generate_slider_on_change(slider_key, item['name']),
+                    # label_visibility='collapsed'
                 )
-                hist = hist / hist.sum()
-                th_min, th_max = st.session_state[slider_key]
-                temp_min = np.percentile(item['orig_values'], th_min)
-                temp_max = np.percentile(item['orig_values'], th_max)
-                hist_a = hist.copy()  # out of filter range
-                hist_b = hist.copy()  # within filter range
-                for i, edge in enumerate(bin_edges):
-                    if i == len(hist):
-                        break
-                    if edge < temp_min:
-                        hist_b[i] = 0
-                    elif temp_min <= edge and edge < temp_max:
-                        hist_a[i] = 0
-                    else:  # th_max <= edge
-                        hist_b[i] = 0
+            with col_info:
+                info_key = f"emb.info.{item['id']}"
+                if st.button("", icon=":material/info:", key=info_key, use_container_width=True):
+                    show_layer_info(slider_key, item)
+            with col_del:
+                rm_key = f"emb.rm.{item['id']}"
+                if st.button("", icon=":material/close:", key=rm_key, help="remove", use_container_width=True):
+                    st.session_state['temp_gpd_data'].pop(ind)
+                    st.rerun(scope="fragment")
+        # if ind == len(st.session_state['temp_gpd_data']) - 1:
+        #     st.divider()
 
-                data_hist = pd.DataFrame(
-                    {'full': hist_a, 'filter':hist_b},
-                    index=["{:.2f}".format(x) for x in np.round(bin_edges, 2)[1:]]
-                )
-                st.bar_chart(
-                    data=data_hist,
-                    x_label=item['name'],
-                    y_label='density',
-                    y=['full', 'filter'],
-                    height=300,
-                    use_container_width=True,
-                    color=[item['cmap'](0.8), item['cmap'](0.2)],
-                )
-                st.write("full: {:.3f} ~ {:.3f}".format(item['orig_values'].min(), item['orig_values'].max()))
-                st.write("filter: {:.3f} ~ {:.3f}".format(temp_min, temp_max))
-
-        with col4:
-            rm_key = f"emb.rm.{item['id']}"
-            if st.button("remove", icon=":material/delete:", key=rm_key):
-                st.session_state['temp_gpd_data'].pop(ind)
-                st.rerun(scope="fragment")
-        
-        if ind == len(st.session_state['temp_gpd_data']) - 1:
-            st.divider()
-
-    map_container = st.container(height=800, border=False)
-
-    with map_container:
+def show_map():
+    if False:
         with st.popover("layer format"):
             layer_fmt = st.radio("layer format", ["shape", "raster"], horizontal=True, label_visibility="collapsed")
             if layer_fmt == "raster":
                 resolution = st.text_input("resolution (meters)", "1000")
                 resolution = int(resolution)
-        m = folium.Map(
-            location=(38, -100),
-            zoom_start=4,
-            min_zoom=2,
-            max_zoom=20,
-            tiles=st.session_state['user_cfg']['params']['map_base'],
-        )
+    else:
+        layer_fmt = "shape"
 
-        fgroups = []
+    m = folium.Map(
+        location=(38, -100),
+        zoom_start=4,
+        min_zoom=2,
+        max_zoom=20,
+        tiles=st.session_state['user_cfg']['params']['map_base'],
+    )
 
-        # if st.session_state['emb.area']:
-        #     emb_area = folium.GeoJson(
-        #         data=load_boundary(st.session_state['emb.area']),
-        #         style_function=lambda _x: {
-        #             "fillColor": "#1100f8",
-        #             "color": "#1100f8",
-        #             "fillOpacity": 0.0,
-        #             "weight": 2,
-        #         }
-        #     )
-        #     fg = folium.FeatureGroup(name="Extent")
-        #     fg.add_child(emb_area)
-        #     fgroups.append(fg)
+    fgroups = []
 
-        for item in st.session_state['temp_gpd_data']:
+    # if st.session_state['emb.area']:
+    #     emb_area = folium.GeoJson(
+    #         data=load_boundary(st.session_state['emb.area']),
+    #         style_function=lambda _x: {
+    #             "fillColor": "#1100f8",
+    #             "color": "#1100f8",
+    #             "fillOpacity": 0.0,
+    #             "weight": 2,
+    #         }
+    #     )
+    #     fg = folium.FeatureGroup(name="Extent")
+    #     fg.add_child(emb_area)
+    #     fgroups.append(fg)
 
-            if layer_fmt == 'shape':
-                fg = folium.FeatureGroup(name=item['name'])
-                fields = list(item['data_filtered'].columns)
-                fields.remove('geometry')
-                fields.remove(st.session_state['emb.desc_col'])
-                tooltip = folium.GeoJsonTooltip(
-                    fields=fields,
-                    # fields=[st.session_state['emb.desc_col'], item['name']],
-                    # aliases=["description", f"query_sim ({item['name']})"],
-                    # fields=[item['name']],
-                    # aliases=[f"query_sim ({item['name']})"],
-                    localize=True,
-                    sticky=True,
-                    labels=True,
-                    max_width=100,
+    for item in st.session_state['temp_gpd_data']:
+
+        if layer_fmt == 'shape':
+            fg = folium.FeatureGroup(name=item['name'])
+            fields = list(item['data_filtered'].columns)
+            fields.remove('geometry')
+            fields.remove(st.session_state['emb.desc_col'])
+            tooltip = folium.GeoJsonTooltip(
+                fields=fields,
+                # fields=[st.session_state['emb.desc_col'], item['name']],
+                # aliases=["description", f"query_sim ({item['name']})"],
+                # fields=[item['name']],
+                # aliases=[f"query_sim ({item['name']})"],
+                localize=True,
+                sticky=True,
+                labels=True,
+                max_width=100,
+            )
+            fg.add_child(
+                folium.GeoJson(
+                    data=item['data_filtered'],
+                    style_function=item['style'],
+                    highlight_function=item['highlight'],
+                    tooltip=tooltip,
+                    smooth_factor=1,
                 )
-                fg.add_child(
-                    folium.GeoJson(
-                        data=item['data_filtered'],
-                        style_function=item['style'],
-                        highlight_function=item['highlight'],
-                        tooltip=tooltip,
-                    )
-                )
-                fgroups.append(fg)
-            else:
-                raster_tmp = raster_temp_layer(item['data_filtered'], resolution=resolution)
-                bounds = item['data_filtered'].to_crs(epsg=4326).total_bounds
-                # Define map bounds
-                map_bounds = [[bounds[1], bounds[0]], [bounds[3], bounds[2]]]
+            )
+            fgroups.append(fg)
+        else:
+            raster_tmp = raster_temp_layer(item['data_filtered'], resolution=resolution)
+            bounds = item['data_filtered'].to_crs(epsg=4326).total_bounds
+            # Define map bounds
+            map_bounds = [[bounds[1], bounds[0]], [bounds[3], bounds[2]]]
 
-                # Add ImageOverlay
-                folium.raster_layers.ImageOverlay(
-                    name=item['name'],
-                    image=raster_tmp,  # Path to your raster image
-                    bounds=map_bounds,
-                    opacity=0.6,
-                    pixelated=True,
-                    colormap=lambda x: (*to_rgba(item['cmap'](x))[:3], x),
-                    mercator_project=True,
-                ).add_to(m)
+            # Add ImageOverlay
+            folium.raster_layers.ImageOverlay(
+                name=item['name'],
+                image=raster_tmp,  # Path to your raster image
+                bounds=map_bounds,
+                opacity=0.6,
+                pixelated=True,
+                colormap=lambda x: (*to_rgba(item['cmap'](x))[:3], x),
+                mercator_project=True,
+            ).add_to(m)
 
-        markers = st_folium(
-            m,
-            key='folium_map_emb_page',
-            use_container_width=True,
-            # returned_objects=["all_drawings"],
-            feature_group_to_add=fgroups,
-            layer_control=folium.LayerControl(collapsed=False),
-        )
+    markers = st_folium(
+        m,
+        key='folium_map_emb_page',
+        use_container_width=True,
+        # returned_objects=["all_drawings"],
+        feature_group_to_add=fgroups,
+        layer_control=folium.LayerControl(collapsed=False),
+    )
+
+@st.fragment
+def show_layers():
+    if len(st.session_state['temp_gpd_data']) > 0:
+        col_control, col_map = st.columns([0.2, 0.8])
+        with col_control:
+            with st.container(height=800, border=False):
+                show_layer_control()
+        
+        with col_map:
+            with st.container(height=800, border=False):
+                show_map()
+    else:
+        show_map()
 
 @st.dialog("More information")
 def show_info():
@@ -1140,44 +1166,35 @@ def show_info():
 
 @st.fragment
 def show_buttons():
-    if st.button("", icon=":material/pentagon:", help="Prepare shapefile", type="primary"):
-        prepare_shapefile()
+    with st.popover("Menu", icon=":material/menu:"):
+        if st.button("Prepare shapefile", icon=":material/pentagon:", type="secondary", use_container_width=True):
+            prepare_shapefile()
 
-    # if st.button("", icon=":material/upload:", help="Upload boundary files", type="secondary"):
-    #     upload_boundary()
+        if st.button("Find contact", icon=":material/join_inner:", type="secondary", use_container_width=True):
+            find_contact()
 
-    # if st.button("", icon=":material/draw:", help="Draw boundaries", type="secondary"):
-    #     show_drawing_instruction()
+        if st.button("Download layers", icon=":material/download:", type="secondary", use_container_width=True):
+            download_layers()
 
-    # if st.button("", icon=":material/save_as:", help="Save boundary", type="secondary"):
-    #     save_drawings()
-    
-    if st.button("", icon=":material/join_inner:", help="Find contact", type="secondary"):
-        find_contact()
+        if st.button("Push layers to CDR", icon=":material/cloud_upload:", type="secondary", use_container_width=True):
+            push_layers_to_cdr(debug=False)
 
-    if st.button("", icon=":material/download:", help="Download layers", type="primary"):
-        download_layers()
-
-    if st.button("", icon=":material/cloud_upload:", help="Push layers to CDR", type="primary"):
-        push_layers_to_cdr(debug=False)
-    
-    if st.button("", icon=":material/help:", help="Help", type="secondary"):
-        show_info()
+        if st.button("Help", icon=":material/help:", type="secondary", use_container_width=True):
+            show_info()
 
 
-col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
+# col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
 if 'cmas' not in st.session_state:
     st.session_state['cmas'] = get_cmas(
         url = st.session_state['user_cfg']['endpoints']['cdr_cmas'],
         cdr_key = st.secrets['cdr_key'], size=20
     ) if 'cdr_key' in st.secrets else []
 
-with col_menu:
-    show_buttons()
 
-with col_map:
-    generate_new_layers()
-    show_layers()
+show_buttons()
+generate_new_layers()
+st.divider()
+show_layers()
 
 
 

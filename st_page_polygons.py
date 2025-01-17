@@ -165,17 +165,17 @@ def job_status_section(job_id_):
                     time.sleep(5)
                     status = cdr_check_job(job_id, st.secrets['cdr_key'])
                 if status['status'] == 'success':
-                    st.write(":green[Success :material/check:]")
+                    st.write(":green[Success :material/check_circle:]")
                 else:
-                    st.error(":red[Failed]")
+                    st.error(":red[Failed :material/cancel:]")
 
                 st.write(f"Downloading result {job_id} from CDR ...")
                 try:
                     cdr_download_job(job_id, download_dir_ta1, st.secrets['cdr_key'])
-                    st.write(":green[Success :material/check:]")
+                    st.write(":green[Success :material/check_circle:]")
                 except Exception as e:
                     print(e)
-                    st.error(":red[Failed]")
+                    st.error(":red[Failed :material/cancel:]")
 
                 st.write(f"Extracting polygons {job_id+'.zip'} ...")
                 zip_fullpath = os.path.join(download_dir_ta1, job_id+'.zip')
@@ -184,7 +184,7 @@ def job_status_section(job_id_):
                     unzip(zip_fullpath, out_dir)
                 if not os.path.exists(out_dir+'.gpkg'):
                     zip_to_gpkg(out_dir)
-                st.write(":green[Success :material/check:]")
+                st.write(":green[Success :material/check_circle:]")
 
                 status.update(
                     label="Complete!", state="complete", expanded=False

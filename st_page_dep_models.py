@@ -104,7 +104,7 @@ if 'dep_model_edit' not in st.session_state:
     st.stop()
 
 with st.container(border=True):
-    col1, col2, col3 = st.columns([0.6, 0.2, 0.2])
+    col1, col2 = st.columns([0.8, 0.2])
     with col1:
         dep_model_list = list(st.session_state['dep_model_edit'].keys())
         dep_model_list.sort()
@@ -118,11 +118,6 @@ with st.container(border=True):
         create_dep_model=st.button('create new', use_container_width=True, icon=":material/add:")
         if create_dep_model:
             add_new_dep_type()
-    with col3:
-        if selected_type:
-            if st.button(f'delete **{selected_type}**', use_container_width=True, icon=":material/delete:"):
-                del st.session_state['dep_model_edit'][selected_type]
-                st.rerun()
 
     if selected_type:
         dep_model_df = st.session_state['dep_model_edit'][selected_type]
@@ -133,9 +128,15 @@ with st.container(border=True):
             height=600,
             use_container_width=True,
         )
-        # print(edited_df)
-        if st.button(f'save edits for **{selected_type}**', icon=":material/save:"):
-            edited_df.reset_index(drop=True, inplace=True)
-            st.session_state['dep_model_edit'][selected_type] = edited_df
+        
+        col_del, col_save = st.columns(2)
+        with col_del:
+            if st.button(f'**Delete** *{selected_type}*', use_container_width=True, icon=":material/delete:"):
+                del st.session_state['dep_model_edit'][selected_type]
+                st.rerun()
+        with col_save:
+            if st.button(f'**Save** *{selected_type}*', icon=":material/save:", use_container_width=True, type="primary"):
+                edited_df.reset_index(drop=True, inplace=True)
+                st.session_state['dep_model_edit'][selected_type] = edited_df
 
 st.button('I have finished editting', icon=":material/save_as:", type="primary", on_click=save_to_new)

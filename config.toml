@@ -14,7 +14,7 @@ video = "https://drive.google.com/file/d/11-qpIgp9z8jPqdnxUKnW4pbEVvyGs9ep/view?
 [params]
 percentile_threshold_min = 80
 percentile_threshold_default = 90
-histogram_bins = 25
+histogram_bins = 80
 raster_height = 500
 raster_width = 500
 map_base = 'Cartodb Positron'
