@@ -1046,11 +1046,11 @@ def show_layer_control():
                 )
             with col_info:
                 info_key = f"emb.info.{item['id']}"
-                if st.button("", icon=":material/info:", key=info_key, use_container_width=True):
+                if st.button("", icon=":material/info:", key=info_key, type="tertiary", use_container_width=True):
                     show_layer_info(slider_key, item)
             with col_del:
                 rm_key = f"emb.rm.{item['id']}"
-                if st.button("", icon=":material/close:", key=rm_key, help="remove", use_container_width=True):
+                if st.button("", icon=":material/close:", key=rm_key, help="remove", type="tertiary", use_container_width=True):
                     st.session_state['temp_gpd_data'].pop(ind)
                     st.rerun(scope="fragment")
         # if ind == len(st.session_state['temp_gpd_data']) - 1:
@@ -1150,6 +1150,7 @@ def show_layers():
         col_control, col_map = st.columns([0.2, 0.8])
         with col_control:
             with st.container(height=800, border=False):
+                st.write("##### Evidence layers")
                 show_layer_control()
         
         with col_map:
@@ -1167,21 +1168,20 @@ def show_info():
 
 @st.fragment
 def show_buttons():
-    with st.popover("Menu", icon=":material/menu:"):
-        if st.button("Prepare shapefile", icon=":material/pentagon:", type="secondary", use_container_width=True):
-            prepare_shapefile()
+    if st.button("Prepare shapefile", icon=":material/pentagon:", type="secondary", use_container_width=True):
+        prepare_shapefile()
 
-        if st.button("Find contact", icon=":material/join_inner:", type="secondary", use_container_width=True):
-            find_contact()
+    if st.button("Find contact", icon=":material/join_inner:", type="secondary", use_container_width=True):
+        find_contact()
 
-        if st.button("Download layers", icon=":material/download:", type="secondary", use_container_width=True):
-            download_layers()
+    if st.button("Download layers", icon=":material/download:", type="secondary", use_container_width=True):
+        download_layers()
 
-        if st.button("Push layers to CDR", icon=":material/cloud_upload:", type="secondary", use_container_width=True):
-            push_layers_to_cdr(debug=False)
+    if st.button("Push layers to CDR", icon=":material/cloud_upload:", type="secondary", use_container_width=True):
+        push_layers_to_cdr(debug=False)
 
-        if st.button("Help", icon=":material/help:", type="secondary", use_container_width=True):
-            show_info()
+    if st.button("Help", icon=":material/help:", type="secondary", use_container_width=True):
+        show_info()
 
 
 # col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
@@ -1192,9 +1192,12 @@ if 'cmas' not in st.session_state:
     ) if 'cdr_key' in st.secrets else []
 
 
-show_buttons()
-generate_new_layers()
-st.divider()
+with st.popover("Menu", icon=":material/menu:"):
+    show_buttons()
+
+with st.container(border=True):
+    generate_new_layers()
+
 show_layers()
 
 
