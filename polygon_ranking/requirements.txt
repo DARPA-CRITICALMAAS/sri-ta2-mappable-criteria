@@ -30,7 +30,7 @@ rasterio==1.4.2
 # python -m spacy download en_core_web_sm
 # python -m spacy download en_core_web_lg
 # brew install freetype imagemagick
-streamlit==1.40.1
+streamlit==1.41.1
 leafmap>=0.39.2
 xarray==2024.9.0
 localtileserver>=0.10.5
