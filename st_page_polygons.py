@@ -519,7 +519,7 @@ with tab2:
                 st.dataframe(data_sample.drop(columns=['geometry']))        
 
 with tab3:
-    st.info("Your uploaded shape file should contain **a column of textual descriptions (for all rows)**. Please also remember to manually select this column for the **'Description column'** field in the **'Preapare shapefile'** window.")
+    st.info("Your uploaded shape file should contain **a column of textual descriptions (for all rows)**. After uploading the file, go to :blue-background[:material/menu: Menu] -> :blue-background[:material/pentagon: Prepare shapefile] and select the column in the **'Description column'** box.")
     uploaded_files = st.file_uploader(
         "Upload your own .gpkg files:", accept_multiple_files=True
     )
@@ -528,4 +528,4 @@ with tab3:
         outfname = os.path.join(download_dir_user, uploaded_file.name)
         with open(outfname, 'wb') as f:
             f.write(bytes_data)
-        st.info("uploaded", uploaded_file.name)
+        st.info(f"uploaded {uploaded_file.name}")
