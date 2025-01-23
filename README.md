@@ -133,6 +133,52 @@ You can find more details about it from the steps below.
     mye1225/cmaas-sri-queryplot:latest
     ```
 
+### Nginx and SSL certificate
+1. Install Nginx (if it has not been installed):
+```bash
+sudo apt install nginx -y
+```
+
+2. Create a new Nginx config file for QueryPlot:
+```
+sudo vim /etc/nginx/sites-available/streamlit
+```
+
+3. Add the follwing configuration:
+```nginx
+server {
+    listen 443 ssl;
+    server_name <your.domain.name>;
+
+    ssl_certificate </path/to/cert.pem>;
+    ssl_certificate_key </path/to/key.pem>;
+
+    location / {
+        proxy_pass http://0.0.0.0:8501;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+    }
+
+}
+```
+*Note: Please make sure nginx is able to access the SSL certificate files.
+
+4. Create a symbolic link to enable this configuration:
+```bash
+sudo ln -s /etc/nginx/sites-available/queryplot /etc/nginx/sites-enabled/
+```
+
+5. Test Nginx configuration and restart
+```bash
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
 ### Building docker image locally
 Run this simple docker build command
 ```bash
