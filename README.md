@@ -22,7 +22,7 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
 -   Security Groups setting
     -   add type `Custom TCP` on port `8501` to `Inbound rules`
 
-### Installation with Docker
+### Deployment using pre-built image from DockerHub
 Simply run the script
 ```bash
 QUERYPLOT_PWD=<Your password> CDR_KEY=<Your CDR key> bash setup_docker.sh
@@ -133,7 +133,13 @@ You can find more details about it from the steps below.
     mye1225/cmaas-sri-queryplot:latest
     ```
 
-### Install manually
+### Building docker image locally
+Run this simple docker build command
+```bash
+docker build -t cmaas-sri-queryplot .
+```
+
+### Run python script manually
 1.  Pull code
     ```bash
     mkdir $HOME/app
