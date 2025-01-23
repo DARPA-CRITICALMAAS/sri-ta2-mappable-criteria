@@ -405,21 +405,20 @@ def make_metadata(layer, ftype, deposit_type, desc, cma_no, sysver="v1.1", heigh
 
 # @st.dialog(title="Upload boundary files", width="large")
 def upload_boundary():
-    with st.popover("", icon=":material/upload:", help="upload boundary files", use_container_width=True):
-        uploaded_files = st.file_uploader(
-            "Upload your own boundary files (.zip/.geojson/.gpkg):", accept_multiple_files=True
-        )
-        for uploaded_file in uploaded_files:
-            if not uploaded_file.name.endswith(('.zip', '.geojson', '.gpkg')):
-                st.error(f'{uploaded_file} is not a .zip/.geojson/.gpkg file')
-            else:
-                bytes_data = uploaded_file.read()
-                outfname = os.path.join(st.session_state['download_dir_user_boundary'], uploaded_file.name)
-                with open(outfname, 'wb') as f:
-                    f.write(bytes_data)
+    uploaded_files = st.file_uploader(
+        "Upload your own boundary files (.zip/.geojson/.gpkg):", accept_multiple_files=True
+    )
+    for uploaded_file in uploaded_files:
+        if not uploaded_file.name.endswith(('.zip', '.geojson', '.gpkg')):
+            st.error(f'{uploaded_file} is not a .zip/.geojson/.gpkg file')
+        else:
+            bytes_data = uploaded_file.read()
+            outfname = os.path.join(st.session_state['download_dir_user_boundary'], uploaded_file.name)
+            with open(outfname, 'wb') as f:
+                f.write(bytes_data)
 
-                if len(uploaded_files) > 0:
-                    st.info("Finished uploading. You can now close this window.")
+            if len(uploaded_files) > 0:
+                st.info("Finished uploading. You can now close this window.")
 
 @st.dialog(title="Draw boundaries", width="large")
 def show_drawing_instruction():
@@ -430,45 +429,62 @@ def show_drawing_instruction():
         """
     )
 
+# @st.dialog(title="Delete file", width="large")
+def delete_boundary():
+    # Boundary file
+    boundary_files = os.listdir(st.session_state['download_dir_user_boundary'])
+    boundary_files.sort()
+    fname = st.selectbox(
+        'choose a file',
+        boundary_files,
+        index=None,
+    )
+    if st.button("delete", icon=":material/delete:"):
+        if fname:
+            full_fname = os.path.join(st.session_state['download_dir_user_boundary'], fname)
+            os.remove(full_fname)
+            st.info(f"file {full_fname} has been delted")
+        else:
+            st.warning("you have not choosen a boundary file")
+
 
 # @st.dialog(title="Save boundary", width="large")
 def save_drawings():
-    with st.popover("", icon=":material/save_as:", help="draw a polygon and save it", use_container_width=True):
-        if not st.session_state['user_drawings']['features']:
-            st.error("No polygons have been drawn. Please close this window and draw polygons on the map.")
-            return
-        # with st.container(height=400):
-        #     st.write("preview")
-        #     st.write(st.session_state['user_drawings'])
+    if not st.session_state['user_drawings']['features']:
+        st.info("Please draw a polygon on the map below.")
+        return
+    # with st.container(height=400):
+    #     st.write("preview")
+    #     st.write(st.session_state['user_drawings'])
 
-        existing_fnames = os.listdir(st.session_state['download_dir_user_boundary'])
+    existing_fnames = os.listdir(st.session_state['download_dir_user_boundary'])
 
-        col1, col2 = st.columns([0.7, 0.3], vertical_alignment="bottom")
-        with col1:
-            fname = st.text_input(
-                "",
-                placeholder="boundary name",
-                label_visibility='collapsed'
-            )
-        with col2:
-            ext = st.selectbox(
-                "extension",
-                [".geojson", ".shp", "gpkg"],
-                index=0,
-                label_visibility='collapsed',
-                disabled=True,
-            )
+    col1, col2 = st.columns([0.7, 0.3], vertical_alignment="bottom")
+    with col1:
+        fname = st.text_input(
+            "",
+            placeholder="boundary name",
+            label_visibility='collapsed'
+        )
+    with col2:
+        ext = st.selectbox(
+            "extension",
+            [".geojson", ".shp", "gpkg"],
+            index=0,
+            label_visibility='collapsed',
+            disabled=True,
+        )
 
-        if st.button("Save"):
-            if not fname:
-                st.error("Please type in a name")
-            elif fname in existing_fnames:
-                st.error("File already existed")
-            else:
-                fnamefull = os.path.join(st.session_state['download_dir_user_boundary'], fname + ext)
-                with open(fnamefull, 'w') as f:
-                    geojson.dump(st.session_state['user_drawings'], f)
-                st.info(f"Boundary file saved as *{fname + ext}*. You can now close this window.")
+    if st.button("Save", icon=":material/save:"):
+        if not fname:
+            st.error("Please type in a name")
+        elif fname+ext in existing_fnames:
+            st.error("File already existed")
+        else:
+            fnamefull = os.path.join(st.session_state['download_dir_user_boundary'], fname + ext)
+            with open(fnamefull, 'w') as f:
+                geojson.dump(st.session_state['user_drawings'], f)
+            st.info(f"Boundary file saved as *{fname + ext}*. You can now close this window.")
 
 
 @st.dialog(title="Download layers", width="large")
@@ -624,7 +640,7 @@ def prepare_shapefile():
         )
 
     with col2:
-        st.page_link("st_page_polygons.py", label="Create", icon=":material/add:")
+        st.page_link("st_page_polygons.py", label="More", icon=":material/open_in_new:")
 
     # Description column and embedding model
     col_a, col_b = st.columns([0.7, 0.3], vertical_alignment="bottom")
@@ -689,7 +705,7 @@ def prepare_shapefile():
     else:
         ind = boundary_files.index(st.session_state['emb.area'])
 
-    col_x, col_y, col_z = st.columns([0.8, 0.1, 0.1], vertical_alignment="bottom")
+    col_x, col_y = st.columns([0.9, 0.1], vertical_alignment="bottom")
     with col_x:
         area = st.selectbox(
             "Boundary",
@@ -752,10 +768,16 @@ def prepare_shapefile():
         'type': 'FeatureCollection',
         'features': markers['all_drawings']
     }
+
     with col_y:
-        save_drawings()
-    with col_z:
-        upload_boundary()
+        with st.popover("", icon=":material/more_horiz:"):
+            tabs = st.tabs(["save drawing", "upload boundary", "delete boundary"])
+            with tabs[0]:
+                save_drawings()
+            with tabs[1]:
+                upload_boundary()
+            with tabs[2]:
+                delete_boundary()
 
     # Check selections
     if check_shapefile(shapefile, area, desc_col, model_name):
