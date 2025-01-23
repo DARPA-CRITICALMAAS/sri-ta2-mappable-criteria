@@ -141,7 +141,7 @@ sudo apt install nginx -y
 
 2. Create a new Nginx config file for QueryPlot:
 ```
-sudo vim /etc/nginx/sites-available/streamlit
+sudo vim /etc/nginx/sites-available/queryplot
 ```
 
 3. Add the follwing configuration:
