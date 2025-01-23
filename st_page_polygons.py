@@ -147,6 +147,40 @@ def gdf_merge_concat(data1, data2, key_cols, cols, desc_col, dissolve=False):
     return data_merge
 
 
+@st.dialog(title="Delete shape file", width="large")
+def delete_shape_file():
+    sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
+    ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
+    user_polygons = [f for f in os.listdir(st.session_state['download_dir_user']) if f.endswith(('.gpkg', '.zip'))]
+
+    polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons] + ['user/'+f for f in user_polygons]
+    polygons.sort()
+
+    selected_polygon = st.selectbox(
+        "delete shape file",
+        polygons,
+        placeholder="select a shape file",
+        index=None,
+        label_visibility="collapsed"
+    )
+    if st.button("delete", icon=":material/delete:"):
+        if selected_polygon:
+            if selected_polygon.startswith('sgmc/'):
+                full_fname = os.path.join(st.session_state['preproc_dir_sgmc'], selected_polygon.replace('sgmc/',''))
+            elif selected_polygon.startswith('ta1/'):
+                full_fname = os.path.join(st.session_state['preproc_dir_ta1'], selected_polygon.replace('ta1/',''))
+            elif selected_polygon.startswith('user/'):
+                full_fname = os.path.join(st.session_state['download_dir_user'], selected_polygon.replace('user/',''))
+            else:
+                st.warning("Something went wrong. Please refresh the page and start over again.")
+
+            os.remove(full_fname)
+            st.info(f"file {full_fname} has been delted")
+            st.rerun()
+        else:
+            st.warning("you have not choosen a deposit model file")
+
+
 @st.fragment
 def job_status_section(job_id_):
     with st.container(border=True):
@@ -182,6 +216,9 @@ def job_status_section(job_id_):
                 out_dir = os.path.join(preproc_dir_ta1, job_id)
                 if not os.path.exists(zip_fullpath.replace('.zip', '')):
                     unzip(zip_fullpath, out_dir)
+                st.write(":green[Success :material/check_circle:]")
+
+                st.write(f"Merging gpkg files ...")
                 if not os.path.exists(out_dir+'.gpkg'):
                     zip_to_gpkg(out_dir)
                 st.write(":green[Success :material/check_circle:]")
@@ -210,17 +247,26 @@ def job_status_section(job_id_):
 # m.add_gdf(vis_data, random_color_column=random_column)
 # st.pydeck_chart(m)
 
-sgmc_polygons = [f for f in os.listdir(preproc_dir_sgmc) if f.endswith('.gpkg') or f.endswith('.parquet')]
-ta1_polygons = [f for f in os.listdir(preproc_dir_ta1) if f.endswith('.gpkg')]
-polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons]
+sgmc_polygons = [f for f in os.listdir(st.session_state['preproc_dir_sgmc']) if f.endswith('.gpkg') or f.endswith('.parquet')]
+ta1_polygons = [f for f in os.listdir(st.session_state['preproc_dir_ta1']) if f.endswith('.gpkg')]
+user_polygons = [f for f in os.listdir(st.session_state['download_dir_user']) if f.endswith(('.gpkg', '.zip'))]
+
+polygons = ['sgmc/'+f for f in sgmc_polygons] + ['ta1/'+f for f in ta1_polygons] + ['user/'+f for f in user_polygons]
 polygons.sort()
+
 # st.write("### Available polygon files")
-selected_polygon = st.selectbox(
-    "available shape files",
-    polygons,
-    index=None,
-    # label_visibility="collapsed"
-)
+
+col1, col2 = st.columns([0.7, 0.3], vertical_alignment="bottom")
+with col1:
+    selected_polygon = st.selectbox(
+        "shape files",
+        polygons,
+        placeholder="select a shape file to view",
+        index=None,
+        # label_visibility="collapsed"
+    )
+with col2:
+    st.button("delete shape file", icon=":material/delete:", on_click=delete_shape_file, use_container_width=True)
 
 if 'polygons' not in st.session_state:
     st.session_state['polygons'] = {}
@@ -316,6 +362,7 @@ with tab1:
                     print(e)
 
                 st.info("Please keep a copy of the job_id, which might be needed later to retrieve the results.")
+                st.info("Note that the 'system', 'version', and 'extent' information you used in this query will not be recorded by QueryPlot. You need to record these parameters somewhere else to associate them with the job result when using it.")
         
         with col2:
             map = folium.Map(
