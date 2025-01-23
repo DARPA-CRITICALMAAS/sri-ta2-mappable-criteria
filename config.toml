@@ -1,5 +1,5 @@
 [vars]
-sys_ver = 'v1.6'
+sys_ver = 'v1.7'
 data_dir = '../workdir-data'
 
 [endpoints]
