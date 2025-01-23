@@ -907,30 +907,44 @@ def generate_new_layers():
 @st.dialog("Find contact", width="large")
 def find_contact():
 
+    st.info(
+        """
+        What does "Find contact" do:
+        1. Buffer the polygons in selected layers by **<buffer1>** meters.
+        2. Compute intersections of the two layers.
+        3. Buffer the intersection polygons by **<buffer2>** meters.
+        """
+    )
+
     layer1 = st.selectbox(
         "layer1",
         [item['name'] for item in st.session_state['temp_gpd_data']],
+        index=None,
         placeholder="layer1",
         label_visibility="collapsed",
     )
     layer2 = st.selectbox(
         "layer2",
         [item['name'] for item in st.session_state['temp_gpd_data']],
+        index=None,
         placeholder="layer2",
         label_visibility="collapsed",
     )
 
-    buffer1 = st.text_input(
-        "buffer1",
-        50,
-    )
-    buffer1 = int(buffer1)
-
-    buffer2 = st.text_input(
-        "buffer2",
-        3000,
-    )
-    buffer2 = int(buffer2)
+    with st.expander("buffer size"):
+        col1, col2 = st.columns(2)
+        with col1:
+            buffer1 = st.text_input(
+                "buffer1 (meters)",
+                50,
+            )
+            buffer1 = int(buffer1)
+        with col2:
+            buffer2 = st.text_input(
+                "buffer2 (meters)",
+                3000,
+            )
+            buffer2 = int(buffer2)
 
     if st.button("Find", icon=":material/join_inner:", type="primary"):
         if (not layer1) or (not layer2):
@@ -953,8 +967,16 @@ def find_contact():
             b2 = gpd.GeoDataFrame(item2['data_filtered'], geometry=item2['data_filtered'].buffer(buffer1))
 
             int_layer = gpd.overlay(b1, b2, how='intersection')
+            # Merge columns with the same name (except 'geometry') by concatenating values
+            for col in b1.columns:
+                col_1 = f"{col}_1"
+                col_2 = f"{col}_2"
+                if col_1 in int_layer.columns and col_2 in int_layer.columns and int_layer[col_1].dtype in ['object', 'string']:
+                    int_layer[col] = int_layer[col_1].astype(str) + " AND " + int_layer[col_2].astype(str)
+                    int_layer.drop([col_1, col_2], axis=1, inplace=True)
+
             int_layer = gpd.GeoDataFrame(int_layer, geometry=int_layer.buffer(buffer2))
-            int_layer['contact'] = int_layer[item1['name']+'_1'] * int_layer[item2['name']+'_2']
+            int_layer['contact'] = int_layer[item1['name']] * int_layer[item2['name']]
             # int_layer.drop(columns=[item1['name'], item2['name']], inplace=True)
             add_temp_layer(
                 int_layer,
@@ -1096,7 +1118,10 @@ def show_map():
             fg = folium.FeatureGroup(name=item['name'])
             fields = list(item['data_filtered'].columns)
             fields.remove('geometry')
-            fields.remove(st.session_state['emb.desc_col'])
+            try:
+                fields.remove(st.session_state['emb.desc_col'])
+            except:
+                pass
             tooltip = folium.GeoJsonTooltip(
                 fields=fields,
                 # fields=[st.session_state['emb.desc_col'], item['name']],
