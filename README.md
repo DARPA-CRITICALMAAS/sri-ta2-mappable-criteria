@@ -164,6 +164,7 @@ server {
         proxy_set_header Connection 'upgrade';
     }
 
+    client_max_body_size 500M;
 }
 ```
 *Note: Please make sure nginx is able to access the SSL certificate files.
