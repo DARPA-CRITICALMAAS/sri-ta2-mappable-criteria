@@ -25,10 +25,11 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
 ### Deployment using pre-built image from DockerHub
 Simply run the script
 ```bash
-QUERYPLOT_PWD=<Your password> CDR_KEY=<Your CDR key> bash setup_docker.sh
+QUERYPLOT_PWD=<Create a password> CDR_KEY=<Your CDR key> bash setup_docker.sh
 ```
 This script automatically installs docker (will skip if docker is already installed), pulls the pre-built image, download necessary data artifacts, and runs the container.
-You can find more details about it from the steps below.
+<details>
+  <summary>More details</summary>
 
 1.  Install Docker
     ```bash
@@ -132,6 +133,7 @@ You can find more details about it from the steps below.
     -p 8501:8501 \
     mye1225/cmaas-sri-queryplot:latest
     ```
+</details>
 
 ### Nginx and SSL certificate
 1. Install Nginx (if it has not been installed):
