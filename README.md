@@ -12,15 +12,16 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
 -   Amazon Machine Image (AMI)
     -   Ubuntu Server 24.04 LTS
 -   System spec (recommend m7a.2xlarge equivalent or higher)
-    -   CPU: 3.7 GHz
+    -   CPU: 3.7 GHz (**x86_64**)
     -   Cores: 8
     -   Arch: x86_64
     -   Number of (v)CPUs: 8
     -   Memory: 32 GiB
     -   Storage: 200 GiB
     -   GPU: not required
--   Security Groups setting
-    -   add type `Custom TCP` on port `8501` to `Inbound rules`
+-   Security Group - inbound rules setting
+    -   [Using reverse proxy ([instructions](#nginx-and-ssl-certificate))] (recommended): Open port `80` (HTTP), `443` (HTTPS), and `22` (SSH). The EC2 default security group will open these ports by default.
+    -   [Opening port directly] (not recommended): Add type `Custom TCP` on port `8501`.
 
 ### Deployment using pre-built image from DockerHub
 Simply run the script
