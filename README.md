@@ -20,8 +20,8 @@ This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program
     -   Storage: 200 GiB
     -   GPU: not required
 -   Security Group - inbound rules setting
-    -   [Using reverse proxy ([instructions](#nginx-and-ssl-certificate))] (recommended): Open port `80` (HTTP), `443` (HTTPS), and `22` (SSH). The EC2 default security group will open these ports by default.
-    -   [Opening port directly] (not recommended): Add type `Custom TCP` on port `8501`.
+    -   **[Using reverse proxy ([instructions](#nginx-and-ssl-certificate))] (recommended)**: Open port `80` (HTTP), `443` (HTTPS), and `22` (SSH). The EC2 default security group will open these ports by default.
+    -   [Opening port directly] (*NOT* recommended): Add type `Custom TCP` on port `8501`.
 
 ### Deployment using pre-built image from DockerHub
 Simply run the script
