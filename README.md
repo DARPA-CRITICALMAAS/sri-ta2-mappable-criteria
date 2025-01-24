@@ -7,7 +7,7 @@
 This tool is developed by SRI TA2 team for USGS under DARPA CriticalMAAS program. QueryPlot uses transformer encoder to extract sentence embeddings from polygon descriptions and compare them with a user query embedding to find the top relevant polygons. A user can use either custom query or pre-defined descriptive deposit models to search polygons and download the result layers for further processing in local GIS software.
 
 
-## Installation (on AWS)
+## Deployment (AWS + docker)
 ### Launch EC2 instance
 -   Amazon Machine Image (AMI)
     -   Ubuntu Server 24.04 LTS
@@ -183,6 +183,7 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
+## Other topics
 ### Building docker image locally
 Run this simple docker build command
 ```bash
