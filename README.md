@@ -113,8 +113,7 @@ This script automatically installs docker (will skip if docker is already instal
     data_dir = '../workdir-data'
 
     [endpoints]
-    cdr_cmas = 'https://api.cdr.land/v1/prospectivity/cmas'
-    cdr_push = 'https://api.cdr.land/v1/prospectivity/datasource'
+    cdr = 'https://api.cdr.land/v1/'
 
     [params]
     percentile_threshold_min = 80

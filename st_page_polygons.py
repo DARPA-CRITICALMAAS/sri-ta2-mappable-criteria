@@ -89,7 +89,7 @@ def cdr_intersect_package(system, version, polygon, cdr_key):
         },
     }
 
-    response = requests.post('https://api.cdr.land/v1/features/intersect_package', headers=headers, json=json_data)
+    response = requests.post(st.session_state['user_cfg']['endpoints']['cdr'] + 'features/intersect_package', headers=headers, json=json_data)
     return response.json()
 
 
@@ -98,7 +98,7 @@ def cdr_check_job(job_id, cdr_key):
         'accept': 'application/json',
         'Authorization': f'Bearer {cdr_key}',
         }
-    response = requests.get(f'https://api.cdr.land/v1/jobs/status/{job_id}', headers=headers)
+    response = requests.get(st.session_state['user_cfg']['endpoints']['cdr'] + f'jobs/status/{job_id}', headers=headers)
     return response.json()
 
 
@@ -108,7 +108,7 @@ def cdr_download_job(job_id, download_dir, cdr_key):
         'accept': 'application/json',
         'Authorization': f'Bearer {cdr_key}',
         }
-    response = requests.get(f'https://api.cdr.land/v1/jobs/result/{job_id}', headers=headers)
+    response = requests.get(st.session_state['user_cfg']['endpoints']['cdr']+f'jobs/result/{job_id}', headers=headers)
     download_url = response.json()["result"]["download_url"]
 
     response = requests.get(download_url, stream=True)

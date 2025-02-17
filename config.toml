@@ -3,8 +3,7 @@ sys_ver = 'v1.7'
 data_dir = '../workdir-data'
 
 [endpoints]
-cdr_cmas = 'https://api.cdr.land/v1/prospectivity/cmas'
-cdr_push = 'https://api.cdr.land/v1/prospectivity/datasource'
+cdr = 'https://api.cdr.land/v1/'
 
 [urls]
 user_instruction = "https://docs.google.com/document/d/1WTDQBVn73pqW3YsGDRtNmBFUjEyRdCFV/edit?usp=sharing&ouid=117471927435465203891&rtpof=true&sd=true"

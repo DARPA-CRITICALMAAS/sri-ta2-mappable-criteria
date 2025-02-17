@@ -583,7 +583,7 @@ def push_layers_to_cdr(debug=True):
                             col='query_sim',
                             boundary=boundary,
                             metadata=metadata,
-                            url=st.session_state['user_cfg']['endpoints']['cdr_push'],
+                            url=st.session_state['user_cfg']['endpoints']['cdr'] + 'prospectivity/datasource',
                             cdr_key=st.secrets['cdr_key'],
                             dry_run=False
                         )
@@ -1234,7 +1234,7 @@ def show_buttons():
 # col_menu, col_map = st.columns([0.05, 0.95], vertical_alignment="top")
 if 'cmas' not in st.session_state:
     st.session_state['cmas'] = get_cmas(
-        url = st.session_state['user_cfg']['endpoints']['cdr_cmas'],
+        url = st.session_state['user_cfg']['endpoints']['cdr'] + 'prospectivity/cmas',
         cdr_key = st.secrets['cdr_key'], size=20
     ) if 'cdr_key' in st.secrets else []
 
