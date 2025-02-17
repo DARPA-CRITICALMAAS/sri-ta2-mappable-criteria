@@ -128,7 +128,7 @@ This script automatically installs docker (will skip if docker is already instal
     docker run \
     -d \
     -v $HOME/app/secrets.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/.streamlit/secrets.toml \
-    -v $HOME/app/config.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/config.toml
+    -v $HOME/app/config.toml:/home/ubuntu/app/sri-ta2-mappable-criteria/config.toml \
     -v $HOME/app/workdir-data:/home/ubuntu/app/workdir-data \
     -p 8501:8501 \
     mye1225/cmaas-sri-queryplot:latest
