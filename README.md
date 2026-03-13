@@ -146,7 +146,7 @@ sudo apt install nginx -y
 sudo vim /etc/nginx/sites-available/queryplot
 ```
 
-3. Add the follwing configuration:
+3. Add the following configuration:
 ```nginx
 server {
     listen 443 ssl;
