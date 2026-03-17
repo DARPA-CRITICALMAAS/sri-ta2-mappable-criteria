@@ -193,4 +193,4 @@ with st.container(border=True):
                 edited_df.reset_index(drop=True, inplace=True)
                 st.session_state['dep_model_edit'][selected_type] = edited_df
 
-st.button('I have finished editting', icon=":material/save_as:", type="primary", on_click=save_to_new)
+st.button('I have finished editing', icon=":material/save_as:", type="primary", on_click=save_to_new)
